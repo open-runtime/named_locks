@@ -1,0 +1,25 @@
+name: runtime_named_locks
+homepage: https://pieces.app
+repository: https://github.com/open-runtime/named_locks
+version: 0.0.1
+description: A library for creating and managing named locks in Dart using FFI across macOS, Linux, and Windows.
+publish_to: none
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+# Explicitly declare that this package works on all desktop platforms.
+platforms:
+  linux:
+  macos:
+  windows:
+
+dependencies:
+  stack_trace: ^1.11.1
+  runtime_native_semaphores:
+    path: ../native_semaphores
+
+
+dev_dependencies:
+  test: ^1.25.4
+  safe_int_id: ^1.1.1
+
