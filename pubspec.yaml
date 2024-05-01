@@ -16,6 +16,9 @@ platforms:
 dependencies:
   stack_trace: ^1.11.1
   runtime_native_semaphores:
+    git:
+      url: https://github.com/open-runtime/native_semaphores
+      ref: aot_monorepo_compat
 
 
 dev_dependencies:
