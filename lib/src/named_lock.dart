@@ -1,7 +1,7 @@
 import 'dart:io' show Platform, sleep;
 
 import "package:runtime_native_semaphores/runtime_native_semaphores.dart" show LatePropertyAssigned, NativeSemaphore, NativeSemaphores, UnixSemaphore, WindowsSemaphore;
-import 'execution_call.dart' show ExecutionCall;
+import 'execution_call.dart' show ExecutionCall, ExecutionCallErrors;
 import 'lock_counter.dart' show LockCount, LockCountDeletion, LockCountUpdate, LockCounter, LockCounters, LockCounts;
 import 'lock_identity.dart' show LockIdentities, LockIdentity;
 
@@ -154,7 +154,8 @@ typedef LockType<I extends LockIdentity, IS extends LockIdentities<I>, CU extend
 class NamedLock {
   // Guard will create a new lock fo you with the given lock name
   // Guard and execute some code with the lock held and released it the internal execution completes
-  static ExecutionCall<R> guard<R>({required String name, required ExecutionCall<R> execution, Duration timeout = const Duration(seconds: 5)}) {
+  static ExecutionCall<R, E> guard<R, E extends Exception>(
+      {required String name, required ExecutionCall<R, E> execution, Duration timeout = const Duration(seconds: 5), bool safe = false, bool verbose = false}) {
     execution.guarded = true;
 
     LockType lock = Platform.isWindows ? WindowsLock.instantiate(name: name) : UnixLock.instantiate(name: name);
@@ -172,36 +173,55 @@ class NamedLock {
       // Exit if the timeout has been exceeded already or if the sleep time is greater than 40% of the timeout
       // TODO subtract sleep from timeout now.subtract(_sleep)
       if (DateTime.now().difference(now) > timeout) {
-        execution.error = Exception('Failed to acquire lock within $timeout.');
+        // TODO try to clean up the lock here
+        // TODO pass in a force option to close & unlink
+        // TODO lock..close(force: true)..unlink(force: true);
+
+        // execution.error = Exception('Failed to acquire lock within $timeout.');
         // This will throw because error sets successful to false
         // (execution.completer.isCompleted && execution.successful) || (throw Exception('Failed to execute execution code: ${execution.error}'));
         // TODO Poll the future here if we find one?
+        throw Exception('NamedLock.guard has failed to acquire lock within $timeout.');
       }
 
+      if (verbose) print('NamedLock is not locked: $locked within the NamedLock.guard execution loop and about to try to lock the lock.');
       locked = lock.lock();
 
       if (locked) {
-        print('Guardian Locked in Loop: ${locked}');
-
+        if (verbose) print('NamedLock is locked: $locked within the NamedLock.guard execution loop and about to execute ExecutionCall.callable()');
         execution.execute();
 
-        bool unlocked = lock.unlock();
+        if (verbose) print('NamedLock is locked: $locked within the NamedLock.guard execution loop and has executed ExecutionCall.callable()');
 
-        unlocked || (throw Exception('Failed to unlock semaphore after successful guarded code execution.'));
+        if (verbose) print('NamedLock is locked: $locked within the NamedLock.guard execution loop and about to unlock the lock.');
+        lock.unlock();
 
-        lock
-          ..close()
-          ..unlink();
+        if (verbose) print('NamedLock is unlocked: ${!locked} within the NamedLock.guard execution loop and about to close.');
+        lock.close();
 
-        // TODO poll the future here?
-        // (execution.successful ?? false) || (throw Exception('Failed to execute execution code: ${execution.error}'));
-        return execution;
+        if (verbose) print('NamedLock is closed: ${!lock.opened} within the NamedLock.guard execution loop and about to unlink the named lock.');
+        lock.unlink();
+
+        if (verbose) print('NamedLock is unlocked, closed, and unlinked within the NamedLock.guard execution loop and about to return the execution.');
       } else {
+        if (verbose)
+          print(
+              'NamedLock is not locked: $locked within the NamedLock.guard execution loop and about to sleep for ${_sleep.inMilliseconds} milliseconds due to the lock not being acquired.');
         sleep(_sleep);
         _sleep = Duration(milliseconds: (_sleep.inMilliseconds + _attempt * 10).clamp(5, 500));
-        print('Sleeping for ${_sleep.inMilliseconds} milliseconds next time.');
+        if (verbose)
+          print(
+              'NamedLock is not locked: $locked within the NamedLock.guard execution loop and has slept for ${_sleep.inMilliseconds} milliseconds due to the lock not being acquired.');
         _attempt++;
+        if (verbose)
+          print(
+              'NamedLock is not locked: $locked within the NamedLock.guard execution loop and about to try to lock the lock again. It is on attempt $_attempt and will sleep for ${_sleep.inMilliseconds} milliseconds if lock is not acquired this time.');
       }
+
+      // If we are safe or there is no error, return the execution otherwise throw the error
+      // This will only work if it was synchronous
+      if (!safe && execution.error is ExecutionCallErrors<E>)
+        throw Error.throwWithStackTrace(execution.error?.anticipated ?? execution.error?.unknown ?? 'That\'s a bug!', execution.error!.trace!);
     }
 
     return execution;

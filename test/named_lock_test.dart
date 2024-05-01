@@ -12,9 +12,9 @@ void main() {
       String name = '${safeIntId.getId()}_named_lock';
 
       int nested_calculation() {
-        final ExecutionCall<int> _execution = NamedLock.guard(
+        final ExecutionCall<int, Exception> _execution = NamedLock.guard(
           name: name,
-          execution: ExecutionCall<int>(
+          execution: ExecutionCall<int, Exception>(
             callable: () {
               sleep(Duration(milliseconds: Random().nextInt(5000)));
               return 3 + 4;
@@ -25,9 +25,9 @@ void main() {
         return _execution.returned;
       }
 
-      final ExecutionCall<int> execution = NamedLock.guard(
+      final ExecutionCall<int, Exception> execution = NamedLock.guard(
         name: name,
-        execution: ExecutionCall<int>(
+        execution: ExecutionCall<int, Exception>(
           callable: () {
             sleep(Duration(milliseconds: Random().nextInt(2000)));
             return (nested_calculation() * 2) + 5;
@@ -42,17 +42,17 @@ void main() {
       Future<int> spawn_isolate(String name, int id) async {
         // The entry point for the isolate
         void isolate_entrypoint(SendPort sender) {
-          final ExecutionCall<int> _returnable = NamedLock.guard(
+          final ExecutionCall<int, Exception> _returnable = NamedLock.guard<int, Exception>(
             name: name,
-            execution: ExecutionCall<int>(
+            execution: ExecutionCall<int, Exception>(
               callable: () {
                 print("Isolate $id is executing with a guard.");
                 sleep(Duration(milliseconds: Random().nextInt(2000)));
 
                 return 2 *
-                    (NamedLock.guard(
+                    (NamedLock.guard<int, Exception>(
                         name: name,
-                        execution: ExecutionCall<int>(
+                        execution: ExecutionCall(
                           callable: () {
                             print("Isolate $id with nested guard is executing.");
                             sleep(Duration(milliseconds: Random().nextInt(2000)));
@@ -78,9 +78,9 @@ void main() {
 
       String name = '${safeIntId.getId()}_named_sem';
 
-      final ExecutionCall<Future<int>> execution = NamedLock.guard(
+      final ExecutionCall<Future<int>, Exception> execution = NamedLock.guard(
         name: name,
-        execution: ExecutionCall<Future<int>>(
+        execution: ExecutionCall<Future<int>, Exception>(
           callable: () async {
             sleep(Duration(milliseconds: Random().nextInt(2000)));
             final result_one = spawn_isolate(name, 1);
