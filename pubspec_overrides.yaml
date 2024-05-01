@@ -1,0 +1,4 @@
+# melos_managed_dependency_overrides: runtime_native_semaphores
+dependency_overrides:
+  runtime_native_semaphores:
+    path: ../native_semaphores

@@ -16,7 +16,6 @@ platforms:
 dependencies:
   stack_trace: ^1.11.1
   runtime_native_semaphores:
-    path: ../native_semaphores
 
 
 dev_dependencies:
