@@ -56,14 +56,6 @@ jobs:
       #          key: dart-${{ matrix.config.system_information.operating_system_family }}-${{ matrix.config.system_information.kernel_architecture }}-${{ hashFiles('**/pubspec.lock') }}
       #          restore-keys: dart-${{ matrix.config.system_information.operating_system_family }}-${{ matrix.config.system_information.kernel_architecture }}-
 
-      - name: Restore Cached Protobuf [Unix]
-        uses: actions/cache@v3.3.1
-        id: cache-protobuf
-        with:
-          path: ${{ env.PROTOC_SDK_DIR }}
-          key: protobuf-${{ matrix.config.system_information.operating_system_family }}-${{ matrix.config.system_information.kernel_architecture }}-${{ hashFiles('**/PROTOC_VERSION') }}
-          restore-keys: protobuf-${{ matrix.config.system_information.operating_system_family }}-${{ matrix.config.system_information.kernel_architecture }}-
-
     # TODO: Re-enable the cache for the pub dependencies
     #      - name: Restore Cached Pub Dependencies
     #        uses: actions/cache@v3.3.1
