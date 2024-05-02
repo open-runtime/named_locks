@@ -1,6 +1,7 @@
 import 'dart:io' show sleep;
 import 'dart:isolate' show Isolate, ReceivePort, SendPort;
 import 'dart:math' show Random;
+import 'package:runtime_named_locks/runtime_named_locks.dart';
 import 'package:runtime_named_locks/src/execution_call.dart' show ExecutionCall;
 import 'package:runtime_named_locks/src/named_lock.dart' show NamedLock;
 import 'package:safe_int_id/safe_int_id.dart' show safeIntId;
@@ -53,6 +54,8 @@ void main() {
       expect(guarded.successful.isSet, true);
       expect(guarded.successful.get, false);
       expect(guarded.error.get?.anticipated.get, isA<IntentionalTestException>());
+      expect(guarded.error.get?.unknown.get, equals(null));
+      expect(guarded.error.get?.trace.get, isA<StackTrace>());
       expect(() => guarded.error.get?.rethrow_(), throwsA(isA<IntentionalTestException>()));
     });
   });
