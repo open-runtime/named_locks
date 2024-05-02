@@ -8,17 +8,17 @@ class ExecutionCallErrors<R, E extends Exception> {
 
   late Completer<R> completer;
 
-  ({bool set, E? value}) get anticipated => LatePropertyAssigned<E>(() => _anticipated) ? (set: true, value: _anticipated) : (set: false, value: null);
+  ({bool isSet, E? get}) get anticipated => LatePropertyAssigned<E>(() => _anticipated) ? (isSet: true, get: _anticipated) : (isSet: false, get: null);
 
   late final Object? _unknown;
 
-  ({bool set, Object? value}) get unknown => LatePropertyAssigned<Object>(() => _unknown) ? (set: true, value: _unknown) : (set: false, value: null);
+  ({bool isSet, Object? get}) get unknown => LatePropertyAssigned<Object>(() => _unknown) ? (isSet: true, get: _unknown) : (isSet: false, get: null);
 
   late final StackTrace? _trace;
 
-  ({bool set, StackTrace? value}) get trace => LatePropertyAssigned<StackTrace?>(() => _trace) ? (set: true, value: _trace) : (set: false, value: null);
+  ({bool isSet, StackTrace? get}) get trace => LatePropertyAssigned<StackTrace?>(() => _trace) ? (isSet: true, get: _trace) : (isSet: false, get: null);
 
-  bool get caught => anticipated.set || unknown.set;
+  bool get caught => anticipated.isSet || unknown.isSet;
 
   ExecutionCallErrors({E? anticipated = null, Object? unknown = null, StackTrace? trace = null, required Completer<R> this.completer})
       : _anticipated = anticipated,
@@ -30,10 +30,10 @@ class ExecutionCallErrors<R, E extends Exception> {
 
   FutureOr<E> rethrow_() {
     if (completer.isCompleted)
-      !caught || trace.set ? (throw Error.throwWithStackTrace((anticipated.value ?? unknown.value)!, trace.value!)) : (throw (anticipated.value ?? unknown.value)!);
+      !caught || trace.isSet ? (throw Error.throwWithStackTrace((anticipated.get ?? unknown.get)!, trace.get!)) : (throw (anticipated.get ?? unknown.get)!);
     else
       return completer.future
-          .then((_) => trace.set ? (throw Error.throwWithStackTrace((anticipated.value ?? unknown.value)!, trace.value!)) : (throw (anticipated.value ?? unknown.value)!));
+          .then((_) => trace.isSet ? (throw Error.throwWithStackTrace((anticipated.get ?? unknown.get)!, trace.get!)) : (throw (anticipated.get ?? unknown.get)!));
   }
 }
 
@@ -51,30 +51,28 @@ class ExecutionCall<R, E extends Exception> {
 
   late final ExecutionCallErrors<R, E> _error;
 
-  ExecutionCallErrors<R, E>? get error => LatePropertyAssigned(() => _error) ? _error : null;
+  ({bool isSet, ExecutionCallErrors<R, E>? get}) get error => LatePropertyAssigned(() => _error) ? (isSet: true, get: _error) : (isSet: false, get: null);
 
-  // Keeping this nullable for polling purposes
   late final bool _successful;
 
-  bool get successful => LatePropertyAssigned(() => _successful)
-      ? _successful
-      : (throw Exception('[successful] value is not available yet. To ensure property availabilities [await completer.future].'));
+  get successful => LatePropertyAssigned<E>(() => _successful) ? (isSet: true, value: _successful) : (isSet: false, value: null);
 
-  late final bool guarded;
+  late final bool _guarded;
+
+  ({bool isSet, bool? get}) get guarded => LatePropertyAssigned<bool>(() => _guarded) ? (isSet: true, get: _guarded) : (isSet: false, get: null);
+
+  set guarding(bool value) => value && LatePropertyAssigned<bool>(() => _guarded) ? _guarded = value : null;
 
   bool verbose;
 
   // TODO put lock on here?
-
-  // Identifier is the name of the semaphore
-  // Callable is the function to be executed
   // Todo pass along lock instance?
   ExecutionCall({required ExecutionCallType<R, E> callable, bool this.safe = false, this.verbose = false}) : _callable = callable;
 
   ExecutionCall<R, E> execute() {
     if (verbose) print('Calling Guarded ExecutionCall.execute()');
-    bool _guarded = LatePropertyAssigned<bool>(() => guarded);
-    _guarded || (throw Exception('Call to execute() can only be executed internally from the Lock.guard method.'));
+
+    guarded.isSet || (throw Exception('Call to execute() can only be executed internally from the Lock.guard method.'));
 
     // Catch itself here if we didnt catch it on the returnable itself the LatePropertyAssigned Late will tell us if the returnable caught it already or not
     completer.future.catchError((e, trace) => LatePropertyAssigned<ExecutionCallErrors<R, E>>(() => _error)
@@ -97,7 +95,7 @@ class ExecutionCall<R, E extends Exception> {
                   .completer)
               // when complete successful is true if _error is not set and completer is completed or the completer is completed with an error and successful is set to the opposite of isCompleted which is false
               .whenComplete(() => _successful = completer.isCompleted && !LatePropertyAssigned<ExecutionCallErrors<R, E>>(() => _error) ||
-                  !(completer..completeError((_error.anticipated.value ?? _error.unknown.value)!, _error.trace.value)).isCompleted)
+                  !(completer..completeError((_error.anticipated.get ?? _error.unknown.get)!, _error.trace.get)).isCompleted)
           : _successful = (completer..complete(_returned = returnable)).isCompleted;
 
       if (verbose && returnable is Future)
@@ -108,8 +106,8 @@ class ExecutionCall<R, E extends Exception> {
       // Set successful to false i.e. just use inverse of isCompleted
       _successful = !(completer
             ..completeError((
-              ((_error = ExecutionCallErrors<R, E>(/* setting anticipated here */ anticipated: e, trace: trace, completer: completer)).anticipated.value ?? _error.unknown.value)!,
-              _error.trace.value
+              ((_error = ExecutionCallErrors<R, E>(/* setting anticipated here */ anticipated: e, trace: trace, completer: completer)).anticipated.get ?? _error.unknown.get)!,
+              _error.trace.get
             )))
           .isCompleted;
       // completer.completeError(error.anticipated ?? error.unknown, error.trace);
@@ -118,13 +116,13 @@ class ExecutionCall<R, E extends Exception> {
       // Set successful to false i.e. just use inverse of isCompleted
       _successful = !(completer
             ..completeError((
-              ((_error = ExecutionCallErrors<R, E>(/*setting unknown here */ unknown: e, trace: trace, completer: completer)).anticipated.value ?? _error.unknown.value)!,
-              _error.trace.value
+              ((_error = ExecutionCallErrors<R, E>(/*setting unknown here */ unknown: e, trace: trace, completer: completer)).anticipated.get ?? _error.unknown.get)!,
+              _error.trace.get
             )))
           .isCompleted;
     }
 
-    if (verbose && !successful && completer.isCompleted) print('Finished: Guarded execution call failed with errors: $error');
+    if (verbose && error.isSet) print('Finished: Guarded execution call failed with errors: $error');
     if (verbose) print('Finished: _successful: $_successful');
     if (verbose) print('Finished: completer.isCompleted: ${completer.isCompleted}');
 

@@ -1,7 +1,7 @@
 import 'dart:io' show Platform, sleep;
 
 import "package:runtime_native_semaphores/runtime_native_semaphores.dart" show LatePropertyAssigned, NativeSemaphore, NativeSemaphores, UnixSemaphore, WindowsSemaphore;
-import 'execution_call.dart' show ExecutionCall, ExecutionCallErrors;
+import 'execution_call.dart' show ExecutionCall;
 import 'lock_counter.dart' show LockCount, LockCountDeletion, LockCountUpdate, LockCounter, LockCounters, LockCounts;
 import 'lock_identity.dart' show LockIdentities, LockIdentity;
 
@@ -163,7 +163,7 @@ class NamedLock {
   // Guard and execute some code with the lock held and released it the internal execution completes
   static ExecutionCall<R, E> guard<R, E extends Exception>(
       {required String name, required ExecutionCall<R, E> execution, Duration timeout = const Duration(seconds: 5), bool verbose = false}) {
-    execution.guarded = true;
+    execution.guarding = true;
 
     LockType lock = Platform.isWindows ? WindowsLock.instantiate(name: name) : UnixLock.instantiate(name: name);
     !lock.opened && lock.open() || lock.opened || (throw Exception('Failed to open semaphore before guarded code execution.'));
@@ -227,10 +227,7 @@ class NamedLock {
 
       // If we are safe or there is no error, return the execution otherwise throw the error
       // This will only work if it was synchronous
-      // if (!safe && execution.completer.isCompleted && !execution.successful && execution.error is ExecutionCallErrors<E>)
-      //   throw Error.throwWithStackTrace(execution.error.anticipated!, execution.error.trace!);
-
-      if (!execution.safe && (execution.error?.caught ?? false)) execution.error?.rethrow_();
+      if (!execution.safe && execution.error.isSet) execution.error.get?.rethrow_();
     }
 
     return execution;
