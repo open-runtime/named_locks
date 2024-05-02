@@ -17,9 +17,9 @@ class ExecutionCallErrors<E extends Exception> {
 }
 
 class ExecutionCall<R, E extends Exception> {
-  final completer = Completer<R>();
-
   final ExecutionCallType<R, E> _callable;
+
+  final completer = Completer<R>();
 
   late final R _returned;
 
@@ -54,6 +54,9 @@ class ExecutionCall<R, E extends Exception> {
     bool _guarded = LatePropertyAssigned<bool>(() => guarded);
     _guarded || (throw Exception('Call to execute() can only be executed internally from the Lock.guard method.'));
 
+    // Catch itself here if incorrect
+    completer.future.catchError((e, trace) => LatePropertyAssigned(() => _error) ? _error.unknown = e : _error = ExecutionCallErrors<E>(unknown: e, trace: trace));
+
     try {
       if (verbose) print('Attempting Guarded ExecutionCall.callable()');
 
@@ -63,23 +66,32 @@ class ExecutionCall<R, E extends Exception> {
 
       returnable is Future
           ? returnable
-              .then((_returnable) => _successful = (completer..complete(_returned = _returnable)).isCompleted)
-              .catchError((e, trace) => (_error = ExecutionCallErrors<E>(unknown: e is E ? e : null, anticipated: e is E ? e : null, trace: trace)).unknown)
-              .whenComplete(() => _successful = false)
+              .then((_returnable) => completer..complete(_returned = _returnable))
+              .catchError((e, trace) => ((_error = ExecutionCallErrors<E>(unknown: e is E ? e : null, anticipated: e is E ? e : null, trace: trace))).unknown)
+              .whenComplete(() {
+              _successful = completer.isCompleted ? true : false;
+              successful || (completer..completeError(error.anticipated ?? error.unknown, error.trace)).isCompleted;
+            })
           : _successful = (completer..complete(_returned = returnable)).isCompleted;
 
       if (verbose && returnable is Future)
         print('Guarded ExecutionCall has returned an asynchronous result and will complete when property completer.future is resolved.');
       else if (verbose) print('Guarded ExecutionCall returned a synchronous result and was successful: $_successful');
     } on E catch (e, trace) {
+      if (verbose) print('Caught anticipated exception: $e');
       // Set successful to false
       _successful = (_error = ExecutionCallErrors<E>(anticipated: e, trace: trace)) is! ExecutionCallErrors<E>;
+      completer.completeError(error.anticipated ?? error.unknown, error.trace);
     } catch (e, trace) {
+      if (verbose) print('Guarded ExecutionCall failed with unknown error: $e');
       // Set successful to false
       _successful = (_error = ExecutionCallErrors<E>(unknown: e, trace: trace)) is! ExecutionCallErrors<E>;
+      completer.completeError(error.anticipated ?? error.unknown, error.trace);
     }
 
-    if (verbose) print('Guarded execution call failed with errors: $error');
+    if (verbose && !successful && completer.isCompleted) print('Finished: Guarded execution call failed with errors: $error');
+    if (verbose) print('Finished: _successful: $_successful');
+    if (verbose) print('Finished: completer.isCompleted: ${completer.isCompleted}');
 
     return this;
   }

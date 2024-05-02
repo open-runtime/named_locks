@@ -41,13 +41,11 @@ class UnixLock<
   @override
   I get identity => counter.identity;
 
-  static bool verbose = true;
-
   static late final dynamic __instances;
 
   dynamic get _instances => UnixLock.__instances;
 
-  UnixLock({required String name, required CTR counter}) : super(name: name, counter: counter) {
+  UnixLock({required String super.name, required CTR super.counter, super.verbose = false}) : super() {
     this.name = super.name;
     this.counter = super.counter;
   }
@@ -64,11 +62,11 @@ class UnixLock<
       UL extends UnixLock<I, IS, CU, CD, CT, CTS, CTR, CTRS>,
       NLS extends NamedLocks<I, IS, CU, CD, CT, CTS, CTR, CTRS, UL>
       /* formatting guard comment */
-      >({required String name, I? identity, CTR? counter}) {
+      >({required String name, I? identity, CTR? counter, bool verbose = false}) {
     if (!LatePropertyAssigned<NLS>(() => __instances)) {
       __instances = NamedLocks<I, IS, CU, CD, CT, CTS, CTR, CTRS, UL>();
 
-      if (UnixLock.verbose) print('Setting UnixLock._instances: ${__instances}');
+      if (verbose) print('Setting UnixLock._instances: ${__instances}');
     }
 
     return (__instances as NLS).has<UL>(name: name)
@@ -85,6 +83,7 @@ class UnixLock<
                                 name: name,
                               ) as I,
                         ) as CTR,
+                    verbose: verbose,
                   ) as UL
                 : throw Exception('Platform is not Unix.'),
           );
@@ -100,13 +99,20 @@ class WindowsLock<
     CTS extends LockCounts<CU, CD, CT>,
     CTR extends LockCounter<I, CU, CD, CT, CTS>,
     CTRS extends LockCounters<I, CU, CD, CT, CTS, CTR>> extends WindowsSemaphore<I, IS, CU, CD, CT, CTS, CTR, CTRS> {
-  WindowsLock({required String name, required CTR counter}) : super(name: name, counter: counter);
+  @override
+  late final String name;
 
-  static bool verbose = true;
+  @override
+  late final CTR counter;
 
   static late final dynamic __instances;
 
   dynamic get _instances => WindowsLock.__instances;
+
+  WindowsLock({required String super.name, required CTR super.counter, super.verbose}) : super() {
+    this.name = super.name;
+    this.counter = super.counter;
+  }
 
   static WindowsLock<I, IS, CU, CD, CT, CTS, CTR, CTRS> instantiate<
       I extends LockIdentity,
@@ -120,11 +126,11 @@ class WindowsLock<
       WL extends WindowsLock<I, IS, CU, CD, CT, CTS, CTR, CTRS>,
       NLS extends NamedLocks<I, IS, CU, CD, CT, CTS, CTR, CTRS, WL>
       /* formatting guard comment */
-      >({required String name, I? identity, CTR? counter}) {
+      >({required String name, I? identity, CTR? counter, bool verbose = false}) {
     if (!LatePropertyAssigned<NLS>(() => __instances)) {
       __instances = NamedLocks<I, IS, CU, CD, CT, CTS, CTR, CTRS, WL>();
 
-      if (WindowsLock.verbose) print('Setting WindowsLock._instances: ${__instances}');
+      if (verbose) print('Setting WindowsLock._instances: ${__instances}');
     }
 
     return (__instances as NLS).has<WL>(name: name)
@@ -141,6 +147,7 @@ class WindowsLock<
                                 name: name,
                               ) as I,
                         ) as CTR,
+                    verbose: verbose,
                   ) as WL
                 : throw Exception('Platform is not Windows.'),
           );
@@ -220,8 +227,8 @@ class NamedLock {
 
       // If we are safe or there is no error, return the execution otherwise throw the error
       // This will only work if it was synchronous
-      if (!safe && execution.error is ExecutionCallErrors<E>)
-        throw Error.throwWithStackTrace(execution.error?.anticipated ?? execution.error?.unknown ?? 'That\'s a bug!', execution.error!.trace!);
+      if (!safe && execution.completer.isCompleted && !execution.successful && execution.error is ExecutionCallErrors<E>)
+        throw Error.throwWithStackTrace(execution.error.anticipated!, execution.error.trace!);
     }
 
     return execution;

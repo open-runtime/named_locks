@@ -159,7 +159,7 @@
     },
     {
       "name": "runtime_native_semaphores",
-      "rootUri": "file:///Users/tsavo/.pub-cache/git/native_semaphores-6856ec500dbfbd19d7360bf8abd2f227916888d2/",
+      "rootUri": "file:///Users/tsavo/.pub-cache/hosted/pub.dev/runtime_native_semaphores-1.0.0-beta.2",
       "packageUri": "lib/",
       "languageVersion": "3.2"
     },
@@ -302,7 +302,7 @@
       "languageVersion": "3.2"
     }
   ],
-  "generated": "2024-05-01T20:32:18.114534Z",
+  "generated": "2024-05-02T00:52:06.446241Z",
   "generator": "pub",
   "generatorVersion": "3.3.3"
 }

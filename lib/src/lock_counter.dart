@@ -21,7 +21,7 @@ class LockCount<CU extends LockCountUpdate, CD extends LockCountDeletion> extend
   CU update({required int value}) {
     CU _update = LockCountUpdate(identifier: identifier, from: counts.putIfAbsent(identifier, () => null) ?? counts[identifier], to: counts[identifier] = value) as CU;
 
-    if (NativeSemaphore.verbose)
+    if (verbose)
       _update.from == null ? print("Lock count for $identifier initialized to ${_update.to}.") : print("Lock count for $identifier updated from ${_update.from} to ${_update.to}.");
 
     return _update;
@@ -30,8 +30,7 @@ class LockCount<CU extends LockCountUpdate, CD extends LockCountDeletion> extend
   CD delete() {
     CD _deletion = LockCountDeletion(identifier: identifier, at: counts.remove(identifier)) as CD;
 
-    if (NativeSemaphore.verbose)
-      _deletion.at == null ? print("Lock count for $identifier does not exist.") : print("Lock count for $identifier deleted with final count at ${_deletion.at}.");
+    if (verbose) _deletion.at == null ? print("Lock count for $identifier does not exist.") : print("Lock count for $identifier deleted with final count at ${_deletion.at}.");
 
     return _deletion;
   }
