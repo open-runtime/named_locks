@@ -162,7 +162,7 @@ class NamedLock {
   // Guard will create a new lock fo you with the given lock name
   // Guard and execute some code with the lock held and released it the internal execution completes
   static ExecutionCall<R, E> guard<R, E extends Exception>(
-      {required String name, required ExecutionCall<R, E> execution, Duration timeout = const Duration(seconds: 5), bool safe = false, bool verbose = false}) {
+      {required String name, required ExecutionCall<R, E> execution, Duration timeout = const Duration(seconds: 5), bool verbose = false}) {
     execution.guarded = true;
 
     LockType lock = Platform.isWindows ? WindowsLock.instantiate(name: name) : UnixLock.instantiate(name: name);
@@ -227,8 +227,10 @@ class NamedLock {
 
       // If we are safe or there is no error, return the execution otherwise throw the error
       // This will only work if it was synchronous
-      if (!safe && execution.completer.isCompleted && !execution.successful && execution.error is ExecutionCallErrors<E>)
-        throw Error.throwWithStackTrace(execution.error.anticipated!, execution.error.trace!);
+      // if (!safe && execution.completer.isCompleted && !execution.successful && execution.error is ExecutionCallErrors<E>)
+      //   throw Error.throwWithStackTrace(execution.error.anticipated!, execution.error.trace!);
+
+      if (!execution.safe && (execution.error?.caught ?? false)) execution.error?.rethrow_();
     }
 
     return execution;
