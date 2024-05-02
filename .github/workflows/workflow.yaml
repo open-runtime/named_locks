@@ -1,0 +1,225 @@
+name: Native Named Locks
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  define-matrices:
+    name: Setup Matrix
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - {
+            platforms: [
+              {
+                runner: macos-13-xlarge,
+                refined_matrix: macos_apple_silicon,
+                name: macOS (Apple Silicon),
+                system_information: {
+                  operating_system_family: macos,
+                  kernel_architecture: arm64,
+                  kernel_family: unix
+                },
+                architecture: {
+                  dart: arm64,
+                }
+              },
+              {
+                runner: macos-13-large,
+                refined_matrix: macos_intel,
+                name: macOS (Intel),
+                system_information: {
+                  operating_system_family: macos,
+                  kernel_architecture: x86_64,
+                  kernel_family: unix
+                },
+                architecture: {
+                  dart: x64,
+                }
+              },
+              {
+                runner: aot-linux-runner,
+                refined_matrix: ubuntu,
+                name: Ubuntu,
+                system_information: {
+                  operating_system_family: linux,
+                  kernel_architecture: x86_64,
+                  kernel_family: unix
+                },
+                architecture: {
+                  dart: x64,
+                }
+              },
+              {
+                runner: aot-windows-x64-runner,
+                refined_matrix: windows,
+                name: Windows,
+                system_information: {
+                  operating_system_family: windows,
+                  kernel_architecture: x86_64,
+                  kernel_family: windows_nt
+                },
+                architecture: {
+                  dart: x64,
+                }
+              }
+            ]
+          }
+
+    steps:
+      - name: Install jq
+        run: |
+          if ! command -v jq &> /dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y jq
+          fi
+
+      - name: Output Matrices
+        id: matrices
+        run: |
+          configurations=$(jq -c '.' <<< '${{ toJSON(matrix.config.platforms) }}')
+          echo "metricized=$configurations" >> $GITHUB_OUTPUT
+
+      - name: Output Refined Matrix
+        id: refined
+        run: |
+          matrix_names=("macos_intel" "macos_apple_silicon" "ubuntu" "windows")
+          for name in "${matrix_names[@]}"; do
+            echo "${name}_matrix=$(jq -c ".[] | select(.refined_matrix == \"${name}\")" <<< '${{ steps.matrices.outputs.metricized }}')" >> $GITHUB_OUTPUT
+          done
+
+      - name: Echo Matrices Outputs
+        run: |
+          echo 'macos_intel_matrix=${{ steps.refined.outputs.macos_intel_matrix }}'
+          echo 'macos_apple_silicon_matrix="${{ steps.refined.outputs.macos_apple_silicon_matrix }}"'
+          echo 'ubuntu_matrix="${{ steps.refined.outputs.ubuntu_matrix }}"'
+          echo 'windows_matrix="${{ steps.refined.outputs.windows_matrix }}"'
+    outputs:
+      MACOS_INTEL_MATRIX: ${{ steps.refined.outputs.macos_intel_matrix }}
+      MACOS_APPLE_SILICON_MATRIX: ${{ steps.refined.outputs.macos_apple_silicon_matrix }}
+      UBUNTU_MATRIX: ${{ steps.refined.outputs.ubuntu_matrix }}
+      WINDOWS_MATRIX: ${{ steps.refined.outputs.windows_matrix }}
+
+
+  macos-apple-silicon-matrix:
+    name: Setup ${{ matrix.config.name }} Matrix
+    needs:
+      - define-matrices
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - ${{ fromJSON(needs.define-matrices.outputs.MACOS_INTEL_MATRIX) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Output Matrices
+        id: matrices
+        run: |
+          configuration=$(jq -c '.' <<< '${{ toJSON(matrix.config) }}')
+          echo "metricized=$configuration" >> $GITHUB_OUTPUT
+    outputs:
+      MATRIX_CONFIG: ${{ steps.matrices.outputs.metricized }}
+
+  macos-intel-matrix:
+    name: Setup ${{ matrix.config.name }} Matrix
+    needs:
+      - define-matrices
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - ${{ fromJSON(needs.define-matrices.outputs.MACOS_APPLE_SILICON_MATRIX) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Output Matrices
+        id: matrices
+        run: |
+          configuration=$(jq -c '.' <<< '${{ toJSON(matrix.config) }}')
+          echo "metricized=$configuration" >> $GITHUB_OUTPUT
+    outputs:
+      MATRIX_CONFIG: ${{ steps.matrices.outputs.metricized }}
+
+  ubuntu-matrix:
+    name: Setup ${{ matrix.config.name }} Matrix
+    needs:
+      - define-matrices
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - ${{ fromJSON(needs.define-matrices.outputs.UBUNTU_MATRIX) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Output Matrices
+        id: matrices
+        run: |
+          configuration=$(jq -c '.' <<< '${{ toJSON(matrix.config) }}')
+          echo "metricized=$configuration" >> $GITHUB_OUTPUT
+    outputs:
+      MATRIX_CONFIG: ${{ steps.matrices.outputs.metricized }}
+
+#  windows-matrix:
+#    name: Setup ${{ matrix.config.name }} Matrix
+#    needs:
+#      - define-matrices
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        config:
+#          - ${{ fromJSON(needs.define-matrices.outputs.WINDOWS_MATRIX) }}
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Output Matrices
+#        id: matrices
+#        run: |
+#          configuration=$(jq -c '.' <<< '${{ toJSON(matrix.config) }}')
+#          echo "metricized=$configuration" >> $GITHUB_OUTPUT
+#    outputs:
+#      MATRIX_CONFIG: ${{ steps.matrices.outputs.metricized }}
+
+
+#  windows-tester:
+#    name: Platform Tester ${{ matrix.config.name }}
+#    needs:
+#      - windows-matrix
+#    uses: ./.github/workflows/reusable-named-locks-platform-tester.yaml
+#    with:
+#      matrix-config: ${{ needs.windows-matrix.outputs.MATRIX_CONFIG }}
+#    secrets: inherit
+
+  macos-apple-silicon-tester:
+    name: Platform Tester ${{ matrix.config.name }}
+    needs:
+      - macos-apple-silicon-matrix
+    uses: ./.github/workflows/reusable-named-locks-platform-tester.yaml
+    with:
+      matrix-config: ${{ needs.macos-apple-silicon-matrix.outputs.MATRIX_CONFIG }}
+    secrets: inherit
+
+  macos-intel-tester:
+    name: Platform Tester ${{ matrix.config.name }}
+    needs:
+      - macos-intel-matrix
+    uses: ./.github/workflows/reusable-named-locks-platform-tester.yaml
+    with:
+      matrix-config: ${{ needs.macos-intel-matrix.outputs.MATRIX_CONFIG }}
+    secrets: inherit
+
+  ubuntu-tester:
+    name: Platform Tester ${{ matrix.config.name }}
+    needs:
+      - ubuntu-matrix
+    uses: ./.github/workflows/reusable-named-locks-platform-tester.yaml
+    with:
+      matrix-config: ${{ needs.ubuntu-matrix.outputs.MATRIX_CONFIG }}
+    secrets: inherit

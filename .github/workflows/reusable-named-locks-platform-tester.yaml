@@ -1,0 +1,96 @@
+name: Tests ⎹ Unix (x86_64, arm64) & Windows
+
+on:
+  workflow_call:
+    inputs:
+      matrix-config:
+        description: 'The Matrix as a JSON String to be used for the Matrix Strategy'
+        required: true
+        type: string
+
+jobs:
+  compose:
+    name: ${{ matrix.config.name }} Tester
+    runs-on: ${{ matrix.config.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - ${{ fromJSON(inputs.matrix-config) }}
+
+    env:
+      GH_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
+    steps:
+      - name: Echo Default Cache Paths
+        if: matrix.config.system_information.kernel_family == 'unix'
+        env:
+          DART_SDK_DIR_DEFAULT: /opt/hostedtoolcache/dart-sdk/
+          HOME_BREW_DIR_DEFAULT: /usr/local
+          PUB_CACHE_DIR_DEFAULT: .pub-cache/
+        run: |
+          echo "HOME_BREW_DIR=$(command -v brew >/dev/null 2>&1 && echo "$(brew --prefix)" || echo $HOME_BREW_DIR_DEFAULT)" >> $GITHUB_ENV
+          echo "PUB_CACHE_DIR=$HOME/${PUB_CACHE_DIR_DEFAULT}" >> $GITHUB_ENV
+          echo "DART_SDK_DIR=$(echo $DART_SDK_DIR_DEFAULT)" >> $GITHUB_ENV
+
+      - name: Echo Default Cache Paths [Windows]
+        if: matrix.config.system_information.operating_system_family == 'windows'
+        env:
+          DART_SDK_DIR_DEFAULT: C:\tools\dart-sdk\bin
+        run: |
+          echo "DART_SDK_DIR=$($env:DART_SDK_DIR_DEFAULT)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append          
+          $program_files = $env:ProgramFiles
+          echo "PUB_CACHE_DIR=$env:USERPROFILE\.pub-cache\" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Echo Initial Cache Locations
+        run: |
+          echo 'DART_SDK_DIR: ${{ env.DART_SDK_DIR }}'
+          echo 'PUB_CACHE_DIR: ${{ env.PUB_CACHE_DIR }}'
+
+      # TODO: Re-enable the cache for the dart sdk
+      #      - name: Restore Cached Dart SDK
+      #        uses: actions/cache@v3.3.1
+      #        id: cache-dart-sdk
+      #        with:
+      #          path: ${{ env.DART_SDK_DIR }}
+      #          key: dart-${{ matrix.config.system_information.operating_system_family }}-${{ matrix.config.system_information.kernel_architecture }}-${{ hashFiles('**/pubspec.lock') }}
+      #          restore-keys: dart-${{ matrix.config.system_information.operating_system_family }}-${{ matrix.config.system_information.kernel_architecture }}-
+
+      - name: Restore Cached Protobuf [Unix]
+        uses: actions/cache@v3.3.1
+        id: cache-protobuf
+        with:
+          path: ${{ env.PROTOC_SDK_DIR }}
+          key: protobuf-${{ matrix.config.system_information.operating_system_family }}-${{ matrix.config.system_information.kernel_architecture }}-${{ hashFiles('**/PROTOC_VERSION') }}
+          restore-keys: protobuf-${{ matrix.config.system_information.operating_system_family }}-${{ matrix.config.system_information.kernel_architecture }}-
+
+    # TODO: Re-enable the cache for the pub dependencies
+    #      - name: Restore Cached Pub Dependencies
+    #        uses: actions/cache@v3.3.1
+    #        id: cache-pub-dependencies
+    #        with:
+    #          path: ${{ env.PUB_CACHE_DIR }}
+    #          key: pub-cache-${{ matrix.config.system_information.operating_system_family }}-${{ matrix.config.system_information.kernel_architecture }}-${{ hashFiles('**/pubspec.lock') }}
+    #          restore-keys: pub-cache-${{ matrix.config.system_information.operating_system_family }}-${{ matrix.config.system_information.kernel_architecture }}-
+
+      - name: Checkout
+        uses: actions/checkout@v4.1.1
+        with:
+          lfs: true
+
+      - name: Echo Matrix Configuration
+        run: |
+          configuration=$(jq -c '.' <<< '${{ toJSON(matrix.config) }}')
+          echo $configuration
+        shell: bash
+
+      - name: Setup Dart SDK
+        uses: dart-lang/setup-dart@v1.5.0
+        with:
+          architecture: ${{ matrix.config.architecture.dart }}
+
+      - name: Install Dart Dependencies
+        run: dart pub get
+
+      - name: Run Dart Tests
+        run: dart test .

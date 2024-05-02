@@ -47,7 +47,7 @@ class ExecutionCall<R, E extends Exception> {
   bool safe;
 
   R get returned =>
-      LatePropertyAssigned(() => _returned) ? _returned : (throw Exception('[returned] value is not available. To ensure property availabilities [await completer.future]. '));
+      LatePropertyAssigned<R>(() => _returned) ? _returned : (throw Exception('[returned] value is not available. To ensure property availabilities [await completer.future]. '));
 
   late final ExecutionCallErrors<R, E> _error;
 
@@ -55,7 +55,7 @@ class ExecutionCall<R, E extends Exception> {
 
   late final bool _successful;
 
-  get successful => LatePropertyAssigned<E>(() => _successful) ? (isSet: true, value: _successful) : (isSet: false, value: null);
+  ({bool isSet, bool? get}) get successful => LatePropertyAssigned<bool>(() => _successful) ? (isSet: true, get: _successful) : (isSet: false, get: null);
 
   late final bool _guarded;
 
@@ -72,7 +72,7 @@ class ExecutionCall<R, E extends Exception> {
   ExecutionCall<R, E> execute() {
     if (verbose) print('Calling Guarded ExecutionCall.execute()');
 
-    guarded.isSet || (throw Exception('Call to execute() can only be executed internally from the Lock.guard method.'));
+    !guarded.isSet && (guarding = true) || (throw Exception('Call to execute() can only be executed internally from the Lock.guard method.'));
 
     // Catch itself here if we didnt catch it on the returnable itself the LatePropertyAssigned Late will tell us if the returnable caught it already or not
     completer.future.catchError((e, trace) => LatePropertyAssigned<ExecutionCallErrors<R, E>>(() => _error)
@@ -82,13 +82,13 @@ class ExecutionCall<R, E extends Exception> {
     try {
       if (verbose) print('Attempting Guarded ExecutionCall.callable()');
 
-      final R returnable = _callable();
+      _returned = _callable();
 
-      if (verbose) print('Guarded ExecutionCall Returnable: $returnable');
+      if (verbose) print('Guarded ExecutionCall Returned: $returned');
 
-      returnable is Future
-          ? returnable
-              .then((_returnable) => completer..complete(_returned = _returnable))
+      _returned is Future<R>
+          ? _returned
+              .then(completer.complete)
               // catch the error on returnable
               .catchError((e, trace) => (this
                     .._error = ExecutionCallErrors<R, E>(anticipated: e is E ? e : null, unknown: e is! E && e is Object ? e : null, trace: trace, completer: completer))
@@ -96,11 +96,11 @@ class ExecutionCall<R, E extends Exception> {
               // when complete successful is true if _error is not set and completer is completed or the completer is completed with an error and successful is set to the opposite of isCompleted which is false
               .whenComplete(() => _successful = completer.isCompleted && !LatePropertyAssigned<ExecutionCallErrors<R, E>>(() => _error) ||
                   !(completer..completeError((_error.anticipated.get ?? _error.unknown.get)!, _error.trace.get)).isCompleted)
-          : _successful = (completer..complete(_returned = returnable)).isCompleted;
+          : _successful = (completer..complete(_returned)).isCompleted;
 
-      if (verbose && returnable is Future)
+      if (verbose && _returned is Future<R>)
         print('Guarded ExecutionCall has returned an asynchronous result and will complete when property completer.future is resolved.');
-      else if (verbose) print('Guarded ExecutionCall returned a synchronous result and was successful: $_successful');
+      else if (verbose) print('Guarded ExecutionCall returned a synchronous result and was successful: $_successful with return value: $returned');
     } on E catch (e, trace) {
       if (verbose) print('Caught anticipated exception: $e');
       // Set successful to false i.e. just use inverse of isCompleted
@@ -123,7 +123,7 @@ class ExecutionCall<R, E extends Exception> {
     }
 
     if (verbose && error.isSet) print('Finished: Guarded execution call failed with errors: $error');
-    if (verbose) print('Finished: _successful: $_successful');
+    if (verbose) print('Finished: _successful: $_successful, successful: ${successful}');
     if (verbose) print('Finished: completer.isCompleted: ${completer.isCompleted}');
 
     return this;
