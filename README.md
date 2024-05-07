@@ -3,9 +3,7 @@
 [![Native Named Locks](https://github.com/open-runtime/named_locks/actions/workflows/workflow.yaml/badge.svg)](https://github.com/open-runtime/named_locks/actions/workflows/workflow.yaml)
 
 ## Overview
-This Dart package provides a robust solution for managing execution flow in concurrent Dart applications through named locks, ensuring that critical sections of code are accessed in a controlled manner to prevent race 
-conditions. Leveraging the [runtime_native_semaphore](https://pub.dev/packages/runtime_native_semaphores) package, it utilizes low-level native named semaphores, offering a reliable and efficient locking mechanism that 
-right from with your Dart/Flutter Project. This approach allows for fine-grained control over resource access across multiple isolates, enhancing the safety and performance of your concurrent applications.
+This Dart package provides a robust solution for managing execution flow in concurrent Dart applications through named locks, ensuring that critical sections of code are accessed in a controlled manner to prevent race conditions. Leveraging the [runtime_native_semaphore](https://pub.dev/packages/runtime_native_semaphores) package, it utilizes low-level native named semaphores, offering a reliable and efficient locking mechanism right from your Dart/Flutter Project. This approach allows for fine-grained control over resource access across multiple isolates, enhancing the safety and performance of your concurrent applications.
 
 ## Use Cases
 - **Cross-Isolate Synchronization**: Use NamedLocks to synchronize and coordinate atomic actions such as database writes, file access, or other shared resources across different Dart isolates within the same application.
