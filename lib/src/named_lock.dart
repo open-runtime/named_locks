@@ -162,7 +162,7 @@ class NamedLock {
   // Guard will create a new lock fo you with the given lock name
   // Guard and execute some code with the lock held and released it the internal execution completes
   static ExecutionCall<R, E> guard<R, E extends Exception>(
-      {required String name, required ExecutionCall<R, E> execution, Duration timeout = const Duration(seconds: 5), bool verbose = false}) {
+      {required String name, required ExecutionCall<R, E> execution, Duration timeout = const Duration(seconds: 5), bool verbose = false, String? waiting}) {
     execution.guarding = true;
 
     LockType lock = Platform.isWindows ? WindowsLock.instantiate(name: name) : UnixLock.instantiate(name: name);
@@ -215,6 +215,13 @@ class NamedLock {
           print(
               'NamedLock is not locked: $locked within the NamedLock.guard execution loop and about to sleep for ${_sleep.inMilliseconds} milliseconds due to the lock not being acquired.');
         sleep(_sleep);
+
+        // On first attempt if we are not locked we can print the waiting message
+        if(_attempt == 1 && waiting is String) {
+          print(waiting);
+          waiting = null;
+        }
+
         _sleep = Duration(milliseconds: (_sleep.inMilliseconds + _attempt * 10).clamp(5, 500));
         if (verbose)
           print(
