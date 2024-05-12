@@ -1,9 +1,7 @@
 import 'dart:io' show sleep;
 import 'dart:isolate' show Isolate, ReceivePort, SendPort;
 import 'dart:math' show Random;
-import 'package:runtime_named_locks/runtime_named_locks.dart';
-import 'package:runtime_named_locks/src/execution_call.dart' show ExecutionCall;
-import 'package:runtime_named_locks/src/named_lock.dart' show NamedLock;
+import 'package:runtime_named_locks/runtime_named_locks.dart' show ExecutionCall, NamedLock;
 import 'package:safe_int_id/safe_int_id.dart' show safeIntId;
 import 'package:test/test.dart' show equals, expect, group, isA, test, throwsA;
 

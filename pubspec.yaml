@@ -14,10 +14,10 @@ platforms:
 
 dependencies:
   stack_trace: ^1.11.1
-  runtime_native_semaphores: ^1.0.0-beta.3
+  runtime_native_semaphores: ^1.0.0-beta.5
 
 
 dev_dependencies:
-  test: ^1.25.4
+  test: ^1.25.5
   safe_int_id: ^1.1.1
 
