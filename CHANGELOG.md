@@ -36,6 +36,7 @@
 - TODO: In code dartdoc comments for pub.dev API documentation
 
 ## 1.0.0-beta.6
+- Additional logging within ExecutionCall for async error catching and rethrowing
 - TODO: Layer in `description` property on NamedLocks.guard() method to allow for a custom descriptions to be displayed within errors getting thrown or steps being logged
 - TODO: Leveraging NamedLocks directly i.e. outside the NamedLock.guard() function
 - TODO: Add explicit NamedLocks.guardAsync() method for explicit async executions
