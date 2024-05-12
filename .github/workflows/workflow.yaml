@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - aot_monorepo_compat
   workflow_dispatch:
 
 
@@ -168,34 +169,34 @@ jobs:
     outputs:
       MATRIX_CONFIG: ${{ steps.matrices.outputs.metricized }}
 
-#  windows-matrix:
-#    name: Setup ${{ matrix.config.name }} Matrix
-#    needs:
-#      - define-matrices
-#    strategy:
-#      fail-fast: false
-#      matrix:
-#        config:
-#          - ${{ fromJSON(needs.define-matrices.outputs.WINDOWS_MATRIX) }}
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Output Matrices
-#        id: matrices
-#        run: |
-#          configuration=$(jq -c '.' <<< '${{ toJSON(matrix.config) }}')
-#          echo "metricized=$configuration" >> $GITHUB_OUTPUT
-#    outputs:
-#      MATRIX_CONFIG: ${{ steps.matrices.outputs.metricized }}
+  windows-matrix:
+    name: Setup ${{ matrix.config.name }} Matrix
+    needs:
+      - define-matrices
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - ${{ fromJSON(needs.define-matrices.outputs.WINDOWS_MATRIX) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Output Matrices
+        id: matrices
+        run: |
+          configuration=$(jq -c '.' <<< '${{ toJSON(matrix.config) }}')
+          echo "metricized=$configuration" >> $GITHUB_OUTPUT
+    outputs:
+      MATRIX_CONFIG: ${{ steps.matrices.outputs.metricized }}
 
 
-#  windows-tester:
-#    name: Platform Tester ${{ matrix.config.name }}
-#    needs:
-#      - windows-matrix
-#    uses: ./.github/workflows/reusable-named-locks-platform-tester.yaml
-#    with:
-#      matrix-config: ${{ needs.windows-matrix.outputs.MATRIX_CONFIG }}
-#    secrets: inherit
+  windows-tester:
+    name: Platform Tester ${{ matrix.config.name }}
+    needs:
+      - windows-matrix
+    uses: ./.github/workflows/reusable-named-locks-platform-tester.yaml
+    with:
+      matrix-config: ${{ needs.windows-matrix.outputs.MATRIX_CONFIG }}
+    secrets: inherit
 
   macos-apple-silicon-tester:
     name: Platform Tester ${{ matrix.config.name }}

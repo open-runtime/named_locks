@@ -22,7 +22,9 @@
 ## 1.0.0-beta.4
 - ~~TODO~~ DONE: @tsavo-at-pieces README.md
 - ~~TODO~~ DONE: WindowsNamedLock implementation
+- Updated runtime_native_semaphores dependency to 1.0.0-beta.6
 - All tests passing on MacOS (x86_64 and arm64), Linux (x86_64), Windows (x86_64) 🎉
 - TODO: Leveraging NamedLocks directly i.e. outside the NamedLock.guard() function
 - TODO: Add explicit NamedLocks.guardAsync() method for explicit async executions
 - TODO: In code dartdoc comments for pub.dev API documentation
+
