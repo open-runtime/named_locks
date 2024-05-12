@@ -29,3 +29,9 @@
 - TODO: Add explicit NamedLocks.guardAsync() method for explicit async executions
 - TODO: In code dartdoc comments for pub.dev API documentation
 
+## 1.0.0-beta.5
+- Implemented `String? waiting` property on NamedLocks.guard() method to allow for a custom message to be displayed when waiting for the lock to locked by the current process ahead of execution
+- TODO: Leveraging NamedLocks directly i.e. outside the NamedLock.guard() function
+- TODO: Add explicit NamedLocks.guardAsync() method for explicit async executions
+- TODO: In code dartdoc comments for pub.dev API documentation
+
