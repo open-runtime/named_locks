@@ -88,43 +88,37 @@ class ExecutionCall<R, E extends Exception> {
 
       _returned is Future<R>
           ? _returned
-              .then(completer.complete)
-              // catch the error on returnable
-              .catchError((e, trace) => (this
-                    .._error = ExecutionCallErrors<R, E>(anticipated: e is E ? e : null, unknown: e is! E && e is Object ? e : null, trace: trace, completer: completer))
-                  .completer)
-              // when complete successful is true if _error is not set and completer is completed or the completer is completed with an error and successful is set to the opposite of isCompleted which is false
-              .whenComplete(() => _successful = completer.isCompleted && !LatePropertyAssigned<ExecutionCallErrors<R, E>>(() => _error) ||
-                  !(completer..completeError((_error.anticipated.get ?? _error.unknown.get)!, _error.trace.get)).isCompleted)
-          : _successful = (completer..complete(_returned)).isCompleted;
+          .then(completer.complete)
+            // catch the error on returnable
+          .catchError((e, trace) {
+            if (verbose) print('Guarded ExecutionCall [.catchError()] caught exception in asynchronous return value: $e');
+            (this.._error = ExecutionCallErrors<R, E>(anticipated: e is E ? e : null, unknown: e is! E && e is Object ? e : null, trace: trace, completer: completer)).completer;
+            if (verbose) print('Guarded ExecutionCall [.catchError()] completed: error: $_error');
+          })
+          // when complete successful is true if _error is not set and completer is completed or the completer is completed with an error and successful is set to the opposite of isCompleted which is false
+          .whenComplete(()  {
+          if (verbose) print('Guarded ExecutionCall Future<R> [.whenComplete()] triggered: ${completer.isCompleted}');
+          _successful = completer.isCompleted && !LatePropertyAssigned<ExecutionCallErrors<R, E>>(() => _error) || !(completer..completeError((_error.anticipated.get ?? _error.unknown.get)!, _error.trace.get)).isCompleted;
+          if (verbose) print('Guarded ExecutionCall Future<R> [.whenComplete()] completed: _successful: $_successful');
+      }) : _successful = (completer..complete(_returned)).isCompleted;
 
       if (verbose && _returned is Future<R>)
         print('Guarded ExecutionCall has returned an asynchronous result and will complete when property completer.future is resolved.');
       else if (verbose) print('Guarded ExecutionCall returned a synchronous result and was successful: $_successful with return value: $returned');
+
     } on E catch (e, trace) {
       if (verbose) print('Caught anticipated exception: $e');
       // Set successful to false i.e. just use inverse of isCompleted
-      _successful = !(completer
-            ..completeError((
-              ((_error = ExecutionCallErrors<R, E>(/* setting anticipated here */ anticipated: e, trace: trace, completer: completer)).anticipated.get ?? _error.unknown.get)!,
-              _error.trace.get
-            )))
-          .isCompleted;
-      // completer.completeError(error.anticipated ?? error.unknown, error.trace);
+      _successful = !(completer..completeError((((_error = ExecutionCallErrors<R, E>(/* setting anticipated here */ anticipated: e, trace: trace, completer: completer)).anticipated.get ?? _error.unknown.get)!, _error.trace.get))).isCompleted;
     } catch (e, trace) {
       if (verbose) print('Guarded ExecutionCall failed with unknown error: $e');
       // Set successful to false i.e. just use inverse of isCompleted
-      _successful = !(completer
-            ..completeError((
-              ((_error = ExecutionCallErrors<R, E>(/*setting unknown here */ unknown: e, trace: trace, completer: completer)).anticipated.get ?? _error.unknown.get)!,
-              _error.trace.get
-            )))
-          .isCompleted;
+      _successful = !(completer..completeError((((_error = ExecutionCallErrors<R, E>(/*setting unknown here */ unknown: e, trace: trace, completer: completer)).anticipated.get ?? _error.unknown.get)!, _error.trace.get))).isCompleted;
     }
 
     if (verbose && error.isSet) print('Finished: Guarded execution call failed with errors: $error');
-    if (verbose) print('Finished: _successful: $_successful, successful: ${successful}');
     if (verbose) print('Finished: completer.isCompleted: ${completer.isCompleted}');
+    if (verbose) print('Finished: successful: ${ completer.isCompleted ? successful : 'Success State Still Resolving.' }');
 
     return this;
   }
