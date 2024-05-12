@@ -66,7 +66,7 @@ jobs:
     #          restore-keys: pub-cache-${{ matrix.config.system_information.operating_system_family }}-${{ matrix.config.system_information.kernel_architecture }}-
 
       - name: Checkout
-        uses: actions/checkout@v4.1.1
+        uses: actions/checkout@v4.1.4
         with:
           lfs: true
 
@@ -77,7 +77,7 @@ jobs:
         shell: bash
 
       - name: Setup Dart SDK
-        uses: dart-lang/setup-dart@v1.5.0
+        uses: dart-lang/setup-dart@v1.6.4
         with:
           architecture: ${{ matrix.config.architecture.dart }}
 

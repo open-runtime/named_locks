@@ -15,6 +15,14 @@
 - Helper rethrow_() method for rethrowing internally caught errors to the outside world 
 - Better handling of Futures that are returned from the callable() callback that is internally executed
 - GitHub Actions CI/CD for Testing on MacOS (x86_64 and arm64), Linux (x86_64)
-- TODO @tsavo-at-pieces README.md
-- TODO Leveraging NamedLocks directly i.e. outside the NamedLock.guard() function
-- TODO WindowsNamedLock implementation
+- TODO: @tsavo-at-pieces README.md
+- TODO: Leveraging NamedLocks directly i.e. outside the NamedLock.guard() function
+- TODO: WindowsNamedLock implementation
+
+## 1.0.0-beta.4
+- ~~TODO~~ DONE: @tsavo-at-pieces README.md
+- ~~TODO~~ DONE: WindowsNamedLock implementation
+- All tests passing on MacOS (x86_64 and arm64), Linux (x86_64), Windows (x86_64) 🎉
+- TODO: Leveraging NamedLocks directly i.e. outside the NamedLock.guard() function
+- TODO: Add explicit NamedLocks.guardAsync() method for explicit async executions
+- TODO: In code dartdoc comments for pub.dev API documentation
