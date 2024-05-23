@@ -72,15 +72,13 @@ class NamedLock {
     bool locked = false;
 
     while (!locked) {
-      if (verbose)
-        print(
-            'NamedLock is not locked: $locked within the NamedLock.guard execution loop and about to try to lock the lock.');
       locked = lock.lock();
 
       if (locked) {
         _execute(verbose, locked, execution, lock);
       } else {
         _wait(verbose, locked, _sleep, _attempt, waiting, now, timeout);
+        locked = lock.lock();
       }
 
       // If we are safe or there is no error, return the execution otherwise throw the error
