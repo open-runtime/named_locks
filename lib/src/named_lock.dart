@@ -78,71 +78,9 @@ class NamedLock {
       locked = lock.lock();
 
       if (locked) {
-        if (verbose)
-          print(
-              'NamedLock is locked: $locked within the NamedLock.guard execution loop and about to execute ExecutionCall.callable()');
-        execution.execute();
-
-        if (verbose)
-          print(
-              'NamedLock is locked: $locked within the NamedLock.guard execution loop and has executed ExecutionCall.callable()');
-
-        if (verbose)
-          print(
-              'NamedLock is locked: $locked within the NamedLock.guard execution loop and about to unlock the lock.');
-        lock.unlock();
-
-        if (verbose)
-          print(
-              'NamedLock is unlocked: ${!locked} within the NamedLock.guard execution loop and about to close.');
-        lock.close();
-
-        if (verbose)
-          print(
-              'NamedLock is closed: ${!lock.opened} within the NamedLock.guard execution loop and about to unlink the named lock.');
-        lock.unlink();
-
-        if (verbose)
-          print(
-              'NamedLock is unlocked, closed, and unlinked within the NamedLock.guard execution loop and about to return the execution.');
+        _execute(verbose, locked, execution, lock);
       } else {
-        if (verbose)
-          print(
-              'NamedLock is not locked: $locked within the NamedLock.guard execution loop and about to sleep for ${_sleep.inMilliseconds} milliseconds due to the lock not being acquired.');
-        sleep(_sleep);
-
-        // On first attempt if we are not locked we can print the waiting message
-        if (_attempt == 1 && waiting is String) {
-          print(waiting);
-          waiting = null;
-        }
-
-        _sleep = Duration(
-            milliseconds:
-                (_sleep.inMilliseconds + _attempt * 10).clamp(5, 500));
-        if (verbose)
-          print(
-              'NamedLock is not locked: $locked within the NamedLock.guard execution loop and has slept for ${_sleep.inMilliseconds} milliseconds due to the lock not being acquired.');
-        _attempt++;
-        if (verbose)
-          print(
-              'NamedLock is not locked: $locked within the NamedLock.guard execution loop and about to try to lock the lock again. It is on attempt $_attempt and will sleep for ${_sleep.inMilliseconds} milliseconds if lock is not acquired this time.');
-
-        // TODO implement a backoff strategy
-        // Exit if the timeout has been exceeded already or if the sleep time is greater than 40% of the timeout
-        // TODO subtract sleep from timeout now.subtract(_sleep)
-        if (DateTime.now().difference(now) > timeout) {
-          // TODO try to clean up the lock here
-          // TODO pass in a force option to close & unlink
-          // TODO lock..close(force: true)..unlink(force: true);
-
-          // execution.error = Exception('Failed to acquire lock within $timeout.');
-          // This will throw because error sets successful to false
-          // (execution.completer.isCompleted && execution.successful) || (throw Exception('Failed to execute execution code: ${execution.error}'));
-          // TODO Poll the future here if we find one?
-          throw Exception(
-              'NamedLock.guard has failed to acquire lock within $timeout.');
-        }
+        _wait(verbose, locked, _sleep, _attempt, waiting, now, timeout);
       }
 
       // If we are safe or there is no error, return the execution otherwise throw the error
@@ -152,5 +90,110 @@ class NamedLock {
     }
 
     return execution;
+  }
+
+  /// Wait a little while for the process holding the lock
+  /// to release it.
+  static void _wait(bool verbose, bool locked, Duration _sleep, int _attempt,
+      String? waiting, DateTime now, Duration timeout) {
+    if (verbose)
+      print(
+          'NamedLock is not locked: $locked within the NamedLock.guard execution loop and about to sleep for ${_sleep.inMilliseconds} milliseconds due to the lock not being acquired.');
+    sleep(_sleep);
+
+    // On first attempt if we are not locked we can print the waiting message
+    if (_attempt == 1 && waiting is String) {
+      print(waiting);
+      waiting = null;
+    }
+
+    _sleep = Duration(
+        milliseconds: (_sleep.inMilliseconds + _attempt * 10).clamp(5, 500));
+    if (verbose)
+      print(
+          'NamedLock is not locked: $locked within the NamedLock.guard execution loop and has slept for ${_sleep.inMilliseconds} milliseconds due to the lock not being acquired.');
+    _attempt++;
+    if (verbose)
+      print(
+          'NamedLock is not locked: $locked within the NamedLock.guard execution loop and about to try to lock the lock again. It is on attempt $_attempt and will sleep for ${_sleep.inMilliseconds} milliseconds if lock is not acquired this time.');
+
+    // TODO implement a backoff strategy
+    // Exit if the timeout has been exceeded already or if the sleep time is greater than 40% of the timeout
+    // TODO subtract sleep from timeout now.subtract(_sleep)
+    if (DateTime.now().difference(now) > timeout) {
+      // TODO try to clean up the lock here
+      // TODO pass in a force option to close & unlink
+      // TODO lock..close(force: true)..unlink(force: true);
+
+      // execution.error = Exception('Failed to acquire lock within $timeout.');
+      // This will throw because error sets successful to false
+      // (execution.completer.isCompleted && execution.successful) || (throw Exception('Failed to execute execution code: ${execution.error}'));
+      // TODO Poll the future here if we find one?
+      throw Exception(
+          'NamedLock.guard has failed to acquire lock within $timeout.');
+    }
+  }
+
+  static void _execute(
+      bool verbose,
+      bool locked,
+      ExecutionCall<dynamic, dynamic> execution,
+      LockType<
+              LockIdentity,
+              LockIdentities<LockIdentity>,
+              LockCountUpdate,
+              LockCountDeletion,
+              LockCount<LockCountUpdate, LockCountDeletion>,
+              LockCounts<LockCountUpdate, LockCountDeletion,
+                  LockCount<LockCountUpdate, LockCountDeletion>>,
+              LockCounter<
+                  LockIdentity,
+                  LockCountUpdate,
+                  LockCountDeletion,
+                  LockCount<LockCountUpdate, LockCountDeletion>,
+                  LockCounts<LockCountUpdate, LockCountDeletion,
+                      LockCount<LockCountUpdate, LockCountDeletion>>>,
+              LockCounters<
+                  LockIdentity,
+                  LockCountUpdate,
+                  LockCountDeletion,
+                  LockCount<LockCountUpdate, LockCountDeletion>,
+                  LockCounts<LockCountUpdate, LockCountDeletion,
+                      LockCount<LockCountUpdate, LockCountDeletion>>,
+                  LockCounter<
+                      LockIdentity,
+                      LockCountUpdate,
+                      LockCountDeletion,
+                      LockCount<LockCountUpdate, LockCountDeletion>,
+                      LockCounts<LockCountUpdate, LockCountDeletion,
+                          LockCount<LockCountUpdate, LockCountDeletion>>>>>
+          lock) {
+    if (verbose)
+      print(
+          'NamedLock is locked: $locked within the NamedLock.guard execution loop and about to execute ExecutionCall.callable()');
+    execution.execute();
+
+    if (verbose)
+      print(
+          'NamedLock is locked: $locked within the NamedLock.guard execution loop and has executed ExecutionCall.callable()');
+
+    if (verbose)
+      print(
+          'NamedLock is locked: $locked within the NamedLock.guard execution loop and about to unlock the lock.');
+    lock.unlock();
+
+    if (verbose)
+      print(
+          'NamedLock is unlocked: ${!locked} within the NamedLock.guard execution loop and about to close.');
+    lock.close();
+
+    if (verbose)
+      print(
+          'NamedLock is closed: ${!lock.opened} within the NamedLock.guard execution loop and about to unlink the named lock.');
+    lock.unlink();
+
+    if (verbose)
+      print(
+          'NamedLock is unlocked, closed, and unlinked within the NamedLock.guard execution loop and about to return the execution.');
   }
 }
