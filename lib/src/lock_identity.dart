@@ -22,6 +22,7 @@ class LockIdentity extends SemaphoreIdentity {
 
   String get caller => _caller;
 
+  @override
   String get uuid => [name, isolate, process, caller].join('_');
 
   LockIdentity({required String name}) : super(name: name) {
