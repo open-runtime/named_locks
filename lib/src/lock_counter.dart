@@ -27,6 +27,7 @@ class LockCount<CU extends LockCountUpdate, CD extends LockCountDeletion> extend
     return _update;
   }
 
+  @override
   CD delete() {
     CD _deletion = LockCountDeletion(identifier: identifier, at: counts.remove(identifier)) as CD;
 
