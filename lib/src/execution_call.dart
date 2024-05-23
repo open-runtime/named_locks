@@ -26,7 +26,7 @@ class ExecutionCallErrors<R, E extends Exception> {
         _trace = trace;
 
   @override
-  toString() => 'ExecutionCallErrors(anticipated: $anticipated, Unknown: $unknown, Trace: $trace)';
+  String toString() => 'ExecutionCallErrors(anticipated: $anticipated, Unknown: $unknown, Trace: $trace)';
 
   FutureOr<E> rethrow_() {
     if (completer.isCompleted)
@@ -75,7 +75,7 @@ class ExecutionCall<R, E extends Exception> {
     !guarded.isSet && (guarding = true) || (throw Exception('Call to execute() can only be executed internally from the Lock.guard method.'));
 
     // Catch itself here if we didnt catch it on the returnable itself the LatePropertyAssigned Late will tell us if the returnable caught it already or not
-    completer.future.catchError((e, trace) => LatePropertyAssigned<ExecutionCallErrors<R, E>>(() => _error)
+    completer.future.catchError((e, StackTrace trace) => LatePropertyAssigned<ExecutionCallErrors<R, E>>(() => _error)
         ? e
         : _error = ExecutionCallErrors<R, E>(anticipated: e is E ? e : null, unknown: e is! E && e is Object ? e : null, trace: trace, completer: completer));
 
@@ -90,7 +90,7 @@ class ExecutionCall<R, E extends Exception> {
           ? _returned
               .then(completer.complete)
               // catch the error on returnable
-              .catchError((e, trace) => (this
+              .catchError((e, StackTrace trace) => (this
                     .._error = ExecutionCallErrors<R, E>(anticipated: e is E ? e : null, unknown: e is! E && e is Object ? e : null, trace: trace, completer: completer))
                   .completer)
               // when complete successful is true if _error is not set and completer is completed or the completer is completed with an error and successful is set to the opposite of isCompleted which is false
