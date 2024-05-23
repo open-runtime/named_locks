@@ -1,0 +1,30 @@
+analyzer:
+  errors:
+    always_put_control_body_on_new_line: ignore
+    always_put_required_named_parameters_first: ignore
+    avoid_catches_without_on_clauses: ignore
+    avoid_classes_with_only_static_members: ignore
+    avoid_init_to_null: ignore
+    avoid_redundant_argument_values: ignore
+    avoid_returning_this: ignore
+    avoid_types_on_closure_parameters: ignore
+    combinators_ordering: ignore
+    curly_braces_in_flow_control_structures: ignore
+    lines_longer_than_80_chars: ignore
+    non_constant_identifier_names: ignore
+    omit_local_variable_types: ignore
+    prefer_const_constructors: ignore
+    prefer_expression_function_bodies: ignore
+    prefer_final_locals: ignore
+    prefer_relative_imports: ignore
+    prefer_single_quotes: ignore
+    sort_constructors_first: ignore
+    type_init_formals: ignore
+    unnecessary_brace_in_string_interps: ignore
+    unnecessary_parenthesis: ignore
+    use_super_parameters: ignore
+include: package:lint_hard/all.yaml
+    
+linter:
+  rules:
+    avoid_print : false 
