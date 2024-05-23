@@ -72,22 +72,6 @@ class NamedLock {
     bool locked = false;
 
     while (!locked) {
-      // TODO implement a backoff strategy
-      // Exit if the timeout has been exceeded already or if the sleep time is greater than 40% of the timeout
-      // TODO subtract sleep from timeout now.subtract(_sleep)
-      if (DateTime.now().difference(now) > timeout) {
-        // TODO try to clean up the lock here
-        // TODO pass in a force option to close & unlink
-        // TODO lock..close(force: true)..unlink(force: true);
-
-        // execution.error = Exception('Failed to acquire lock within $timeout.');
-        // This will throw because error sets successful to false
-        // (execution.completer.isCompleted && execution.successful) || (throw Exception('Failed to execute execution code: ${execution.error}'));
-        // TODO Poll the future here if we find one?
-        throw Exception(
-            'NamedLock.guard has failed to acquire lock within $timeout.');
-      }
-
       if (verbose)
         print(
             'NamedLock is not locked: $locked within the NamedLock.guard execution loop and about to try to lock the lock.');
@@ -143,6 +127,22 @@ class NamedLock {
         if (verbose)
           print(
               'NamedLock is not locked: $locked within the NamedLock.guard execution loop and about to try to lock the lock again. It is on attempt $_attempt and will sleep for ${_sleep.inMilliseconds} milliseconds if lock is not acquired this time.');
+
+        // TODO implement a backoff strategy
+        // Exit if the timeout has been exceeded already or if the sleep time is greater than 40% of the timeout
+        // TODO subtract sleep from timeout now.subtract(_sleep)
+        if (DateTime.now().difference(now) > timeout) {
+          // TODO try to clean up the lock here
+          // TODO pass in a force option to close & unlink
+          // TODO lock..close(force: true)..unlink(force: true);
+
+          // execution.error = Exception('Failed to acquire lock within $timeout.');
+          // This will throw because error sets successful to false
+          // (execution.completer.isCompleted && execution.successful) || (throw Exception('Failed to execute execution code: ${execution.error}'));
+          // TODO Poll the future here if we find one?
+          throw Exception(
+              'NamedLock.guard has failed to acquire lock within $timeout.');
+        }
       }
 
       // If we are safe or there is no error, return the execution otherwise throw the error
