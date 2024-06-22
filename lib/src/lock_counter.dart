@@ -37,7 +37,7 @@ class LockCount<CU extends LockCountUpdate, CD extends LockCountDeletion> extend
 }
 
 class LockCounts<CU extends LockCountUpdate, CD extends LockCountDeletion, CT extends LockCount<CU, CD>> extends SemaphoreCounts<CU, CD, CT> {
-  LockCounts({required CT isolate, required CT process}) : super(isolate: isolate, process: process);
+  LockCounts({required CT isolate, required CT process}) : super(isolate_locks: isolate, process_locks: process);
 }
 
 class LockCounters<I extends LockIdentity, CU extends LockCountUpdate, CD extends LockCountDeletion, CT extends LockCount<CU, CD>, CTS extends LockCounts<CU, CD, CT>,

@@ -22,7 +22,7 @@ class LockIdentity extends SemaphoreIdentity {
 
   String get caller => _caller;
 
-  String get uuid => [name, isolate, process, caller].join('_');
+  String get identifier => [name, isolate, process, caller].join('_');
 
   LockIdentity({required String name}) : super(name: name) {
     _frame = CapturedCallFrame();
