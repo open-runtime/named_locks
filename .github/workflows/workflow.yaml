@@ -120,7 +120,7 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - ${{ fromJSON(needs.define-matrices.outputs.MACOS_INTEL_MATRIX) }}
+          - ${{ fromJSON(needs.define-matrices.outputs.MACOS_APPLE_SILICON_MATRIX) }}
     runs-on: ubuntu-latest
     steps:
       - name: Output Matrices
@@ -139,7 +139,7 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - ${{ fromJSON(needs.define-matrices.outputs.MACOS_APPLE_SILICON_MATRIX) }}
+          - ${{ fromJSON(needs.define-matrices.outputs.MACOS_INTEL_MATRIX) }}
     runs-on: ubuntu-latest
     steps:
       - name: Output Matrices
