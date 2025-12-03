@@ -4,20 +4,26 @@ repository: https://github.com/open-runtime/named_locks
 version: 1.0.0-beta.5
 description: A library for creating and managing named locks which leverages Dart FFI and Native Named Semaphores across across macOS, Linux, and Windows.
 environment:
-  sdk: '>=3.3.0 <4.5.0'
-
+  sdk: ^3.9.0
 # Explicitly declare that this package works on all desktop platforms.
 platforms:
   linux:
   macos:
   windows:
-
 dependencies:
-  stack_trace: ^1.11.1
+  # ==========================================================================
+  #
+  # Direct pub.dev dependencies
+  #
+  # ==========================================================================
   runtime_native_semaphores: ^1.0.0-beta.6
-
+  stack_trace: ^1.11.1
 
 dev_dependencies:
   test: ^1.25.5
   safe_int_id: ^1.1.1
-
+  runtime_common_codestyle:
+    git:
+      url: https://github.com/open-runtime/runtime_common_codestyle
+      tag_pattern: v{{version}}
+    version: ^0.1.5
