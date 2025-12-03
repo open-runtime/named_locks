@@ -22,10 +22,7 @@ void main() {
       );
 
       expect(
-        () => NamedLock.guard<void, IntentionalTestException>(
-          name: name,
-          execution: execution,
-        ),
+        () => NamedLock.guard<void, IntentionalTestException>(name: name, execution: execution),
         throwsA(isA<IntentionalTestException>()),
       );
 
@@ -43,10 +40,7 @@ void main() {
         /* Setting safe to true here */ safe: true,
       );
 
-      final guarded = NamedLock.guard<void, Exception>(
-        name: name,
-        execution: execution,
-      );
+      final guarded = NamedLock.guard<void, Exception>(name: name, execution: execution);
 
       expect(guarded.completer.isCompleted, true);
       expect(guarded.successful.isSet, true);

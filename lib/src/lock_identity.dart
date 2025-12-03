@@ -1,4 +1,5 @@
-import 'package:runtime_native_semaphores/runtime_native_semaphores.dart' show LatePropertyAssigned, SemaphoreIdentities, SemaphoreIdentity;
+import 'package:runtime_native_semaphores/runtime_native_semaphores.dart'
+    show LatePropertyAssigned, SemaphoreIdentities, SemaphoreIdentity;
 import 'captured_call_frame.dart' show CapturedCallFrame;
 
 class LockIdentities<I extends LockIdentity> extends SemaphoreIdentities<I> {
@@ -30,7 +31,12 @@ class LockIdentity extends SemaphoreIdentity {
 
   static LockIdentity instantiate<I extends LockIdentity, IS extends LockIdentities<I>>({required String name}) {
     if (!LatePropertyAssigned<IS>(() => __instances)) __instances = LockIdentities<I>();
-    return (__instances as IS).has<I>(name: name) ? (__instances as IS).get(name: name) : (__instances as IS).register(name: name, identity: LockIdentity(name: name) as I);
+    return (__instances as IS).has<I>(name: name)
+        ? (__instances as IS).get(name: name)
+        : (__instances as IS).register(
+            name: name,
+            identity: LockIdentity(name: name) as I,
+          );
   }
 
   @override
