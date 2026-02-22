@@ -182,7 +182,7 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.CICD_GEMINI_API_KEY_OPEN_RUNTIME }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          dart run runtime_ci_tooling:manage_cicd pre-release-triage \
+          dart run runtime_ci_tooling:manage_cicd triage pre-release \
             --prev-tag "${{ needs.determine-version.outputs.prev_tag }}" \
             --version "${{ needs.determine-version.outputs.new_version }}"
 
@@ -695,7 +695,7 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.CICD_GEMINI_API_KEY_OPEN_RUNTIME }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          dart run runtime_ci_tooling:manage_cicd post-release-triage \
+          dart run runtime_ci_tooling:manage_cicd triage post-release \
             --version "${{ needs.determine-version.outputs.new_version }}" \
             --release-tag "v${{ needs.determine-version.outputs.new_version }}" \
             --release-url "https://github.com/${{ github.repository }}/releases/tag/v${{ needs.determine-version.outputs.new_version }}" \
