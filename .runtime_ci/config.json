@@ -89,7 +89,7 @@
   },
   "gemini": {
     "flash_model": "gemini-3-flash-preview",
-    "pro_model": "gemini-3-pro-preview",
+    "pro_model": "gemini-3.1-pro-preview",
     "max_turns": 100,
     "max_concurrent": 4,
     "max_retries": 3
