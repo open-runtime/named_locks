@@ -15,6 +15,8 @@ permissions:
   issues: write
   pull-requests: read
 
+# Gemini API key for release automation (version detection, changelog, release notes).
+# ML provider keys (OpenAI, Anthropic, Bedrock) are not needed for this package.
 env:
   GEMINI_API_KEY: ${{ secrets.CICD_GEMINI_API_KEY_OPEN_RUNTIME }}
 
@@ -33,6 +35,7 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
+      # Layer 4: Infinite loop prevention (git-based, not event-property-based)
       - name: Check for release bot commit
         id: gate
         run: |
@@ -73,9 +76,6 @@ jobs:
           git config --global url."https://x-access-token:${TOKEN}@github.com/open-runtime/".insteadOf "git@github.com:open-runtime/"
           git config --global url."https://x-access-token:${TOKEN}@github.com/pieces-app/".insteadOf "git@github.com:pieces-app/"
 
-      - name: Skip LFS for dependency clones
-        run: git lfs install --skip-smudge
-
       - uses: dart-lang/setup-dart@v1.7.1
         with:
           sdk: "3.9.2"
@@ -101,7 +101,6 @@ jobs:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-mcp-v1
           restore-keys: ${{ runner.os }}-go-mcp-
-
       - name: Determine version
         id: version
         env:
@@ -114,7 +113,7 @@ jobs:
         uses: actions/upload-artifact@v6.0.0
         with:
           name: version-bump-rationale
-          path: version_bumps/
+          path: .runtime_ci/version_bumps/
           retention-days: 90
 
       - name: Upload CI/CD audit trail
@@ -122,7 +121,7 @@ jobs:
         uses: actions/upload-artifact@v6.0.0
         with:
           name: cicd-audit-determine-version
-          path: .cicd_runs/
+          path: .runtime_ci/runs/
           if-no-files-found: ignore
           retention-days: 1
 
@@ -148,9 +147,6 @@ jobs:
           git config --global url."https://x-access-token:${TOKEN}@github.com/open-runtime/".insteadOf "git@github.com:open-runtime/"
           git config --global url."https://x-access-token:${TOKEN}@github.com/pieces-app/".insteadOf "git@github.com:pieces-app/"
 
-      - name: Skip LFS for dependency clones
-        run: git lfs install --skip-smudge
-
       - uses: dart-lang/setup-dart@v1.7.1
         with:
           sdk: "3.9.2"
@@ -176,7 +172,6 @@ jobs:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-mcp-v1
           restore-keys: ${{ runner.os }}-go-mcp-
-
       - name: Pre-release triage
         env:
           GEMINI_API_KEY: ${{ secrets.CICD_GEMINI_API_KEY_OPEN_RUNTIME }}
@@ -186,8 +181,8 @@ jobs:
             --prev-tag "${{ needs.determine-version.outputs.prev_tag }}" \
             --version "${{ needs.determine-version.outputs.new_version }}"
 
-          # Find manifest from .cicd_runs/ audit trail
-          MANIFEST=$(find .cicd_runs -name "issue_manifest.json" -type f 2>/dev/null | sort -r | head -1)
+          # Find manifest from .runtime_ci/runs/ audit trail
+          MANIFEST=$(find .runtime_ci/runs -name "issue_manifest.json" -type f 2>/dev/null | sort -r | head -1)
           if [ -n "$MANIFEST" ]; then
             cp "$MANIFEST" /tmp/issue_manifest.json
           else
@@ -204,7 +199,7 @@ jobs:
         uses: actions/upload-artifact@v6.0.0
         with:
           name: cicd-audit-pre-release-triage
-          path: .cicd_runs/
+          path: .runtime_ci/runs/
           if-no-files-found: ignore
           retention-days: 1
 
@@ -230,9 +225,6 @@ jobs:
           git config --global url."https://x-access-token:${TOKEN}@github.com/open-runtime/".insteadOf "git@github.com:open-runtime/"
           git config --global url."https://x-access-token:${TOKEN}@github.com/pieces-app/".insteadOf "git@github.com:pieces-app/"
 
-      - name: Skip LFS for dependency clones
-        run: git lfs install --skip-smudge
-
       - uses: dart-lang/setup-dart@v1.7.1
         with:
           sdk: "3.9.2"
@@ -258,7 +250,6 @@ jobs:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-mcp-v1
           restore-keys: ${{ runner.os }}-go-mcp-
-
       - uses: actions/download-artifact@v7.0.0
         with:
           name: issue-manifest
@@ -293,7 +284,7 @@ jobs:
         uses: actions/upload-artifact@v6.0.0
         with:
           name: cicd-audit-explore
-          path: .cicd_runs/
+          path: .runtime_ci/runs/
           if-no-files-found: ignore
           retention-days: 1
 
@@ -318,9 +309,6 @@ jobs:
           git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "ssh://git@github.com/"
           git config --global url."https://x-access-token:${TOKEN}@github.com/open-runtime/".insteadOf "git@github.com:open-runtime/"
           git config --global url."https://x-access-token:${TOKEN}@github.com/pieces-app/".insteadOf "git@github.com:pieces-app/"
-
-      - name: Skip LFS for dependency clones
-        run: git lfs install --skip-smudge
 
       - uses: dart-lang/setup-dart@v1.7.1
         with:
@@ -347,7 +335,6 @@ jobs:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-mcp-v1
           restore-keys: ${{ runner.os }}-go-mcp-
-
       - uses: actions/download-artifact@v7.0.0
         continue-on-error: true
         with:
@@ -399,7 +386,7 @@ jobs:
         uses: actions/upload-artifact@v6.0.0
         with:
           name: cicd-audit-compose
-          path: .cicd_runs/
+          path: .runtime_ci/runs/
           if-no-files-found: ignore
           retention-days: 1
 
@@ -424,9 +411,6 @@ jobs:
           git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "ssh://git@github.com/"
           git config --global url."https://x-access-token:${TOKEN}@github.com/open-runtime/".insteadOf "git@github.com:open-runtime/"
           git config --global url."https://x-access-token:${TOKEN}@github.com/pieces-app/".insteadOf "git@github.com:pieces-app/"
-
-      - name: Skip LFS for dependency clones
-        run: git lfs install --skip-smudge
 
       - uses: dart-lang/setup-dart@v1.7.1
         with:
@@ -453,7 +437,6 @@ jobs:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-mcp-v1
           restore-keys: ${{ runner.os }}-go-mcp-
-
       # Download ALL previous stage artifacts for context
       - uses: actions/download-artifact@v7.0.0
         continue-on-error: true
@@ -477,7 +460,7 @@ jobs:
         continue-on-error: true
         with:
           name: version-bump-rationale
-          path: ./version_bumps/
+          path: ./.runtime_ci/version_bumps/
 
       # Copy CHANGELOG from compose stage so release notes can reference it
       - name: Apply compose artifacts
@@ -498,19 +481,22 @@ jobs:
             --prev-tag "${{ needs.determine-version.outputs.prev_tag }}" \
             --version "${{ needs.determine-version.outputs.new_version }}"
 
+      # Consolidate all release notes files under .runtime_ci/release_notes/ before upload.
+      # Mixing relative and absolute paths in upload-artifact causes path
+      # resolution issues. Keep everything under one root.
       - name: Consolidate release notes
         run: |
           VERSION="${{ needs.determine-version.outputs.new_version }}"
-          mkdir -p "release_notes/v${VERSION}"
-          cp /tmp/release_notes_body.md "release_notes/v${VERSION}/" 2>/dev/null || true
-          cp /tmp/migration_guide.md "release_notes/v${VERSION}/" 2>/dev/null || true
-          echo "Contents of release_notes/v${VERSION}/:"
-          ls -la "release_notes/v${VERSION}/" 2>/dev/null || echo "(empty)"
+          mkdir -p ".runtime_ci/release_notes/v${VERSION}"
+          cp /tmp/release_notes_body.md ".runtime_ci/release_notes/v${VERSION}/" 2>/dev/null || true
+          cp /tmp/migration_guide.md ".runtime_ci/release_notes/v${VERSION}/" 2>/dev/null || true
+          echo "Contents of .runtime_ci/release_notes/v${VERSION}/:"
+          ls -la ".runtime_ci/release_notes/v${VERSION}/" 2>/dev/null || echo "(empty)"
 
       - uses: actions/upload-artifact@v6.0.0
         with:
           name: release-notes-artifacts
-          path: release_notes/
+          path: .runtime_ci/release_notes/
           if-no-files-found: warn
           retention-days: 1
 
@@ -518,7 +504,7 @@ jobs:
         uses: actions/upload-artifact@v6.0.0
         with:
           name: cicd-audit-release-notes
-          path: .cicd_runs/
+          path: .runtime_ci/runs/
           if-no-files-found: ignore
           retention-days: 1
 
@@ -530,6 +516,9 @@ jobs:
     if: needs.determine-version.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     steps:
+      # Use PERSONAL_ACCESS_TOKEN for checkout so git push inherits the
+      # token owner's bypass permissions on enterprise branch rulesets.
+      # persist-credentials: true keeps the token in git config for push.
       - uses: actions/checkout@v6.0.2
         with:
           fetch-depth: 0
@@ -544,9 +533,6 @@ jobs:
           git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "ssh://git@github.com/"
           git config --global url."https://x-access-token:${TOKEN}@github.com/open-runtime/".insteadOf "git@github.com:open-runtime/"
           git config --global url."https://x-access-token:${TOKEN}@github.com/pieces-app/".insteadOf "git@github.com:pieces-app/"
-
-      - name: Skip LFS for dependency clones
-        run: git lfs install --skip-smudge
 
       - uses: dart-lang/setup-dart@v1.7.1
         with:
@@ -577,46 +563,58 @@ jobs:
         continue-on-error: true
         with:
           name: version-bump-rationale
-          path: ./version_bumps/
+          path: ./.runtime_ci/version_bumps/
 
       - name: Download CI/CD audit trails
         continue-on-error: true
         uses: actions/download-artifact@v7.0.0
         with:
           pattern: cicd-audit-*
-          path: .cicd_runs_incoming/
+          path: .runtime_ci/runs_incoming/
           merge-multiple: false
 
       - name: Prepare artifacts
         run: |
           VERSION="${{ needs.determine-version.outputs.new_version }}"
-          mkdir -p ./artifacts ./version_bumps "./release_notes/v${VERSION}"
+          mkdir -p ./artifacts ./.runtime_ci/version_bumps "./.runtime_ci/release_notes/v${VERSION}"
 
+          # Stage 3 release notes: downloaded artifact has release_notes/ root
+          # so files land at ./release-notes-artifacts/vX.X.X/release_notes.md
           if [ -d "./release-notes-artifacts/v${VERSION}" ]; then
-            cp -r "./release-notes-artifacts/v${VERSION}/"* "./release_notes/v${VERSION}/" 2>/dev/null || true
+            cp -r "./release-notes-artifacts/v${VERSION}/"* "./.runtime_ci/release_notes/v${VERSION}/" 2>/dev/null || true
+            echo "Copied Stage 3 artifacts from release-notes-artifacts/v${VERSION}/"
           elif [ -d "./release-notes-artifacts" ]; then
+            # Fallback: search recursively for release_notes.md
             FOUND=$(find ./release-notes-artifacts -name "release_notes.md" -type f 2>/dev/null | head -1)
             if [ -n "$FOUND" ]; then
-              cp "$(dirname "$FOUND")"/* "./release_notes/v${VERSION}/" 2>/dev/null || true
+              cp "$(dirname "$FOUND")"/* "./.runtime_ci/release_notes/v${VERSION}/" 2>/dev/null || true
+              echo "Found release notes via recursive search: $FOUND"
             fi
           fi
 
-          if [ -f "./release_notes/v${VERSION}/release_notes_body.md" ]; then
-            cp "./release_notes/v${VERSION}/release_notes_body.md" /tmp/release_notes_body.md
-          elif [ -f "./release_notes/v${VERSION}/release_notes.md" ]; then
-            cp "./release_notes/v${VERSION}/release_notes.md" /tmp/release_notes_body.md
+          # Copy release_notes_body.md to /tmp/ for Dart script
+          if [ -f "./.runtime_ci/release_notes/v${VERSION}/release_notes_body.md" ]; then
+            cp "./.runtime_ci/release_notes/v${VERSION}/release_notes_body.md" /tmp/release_notes_body.md
+          elif [ -f "./.runtime_ci/release_notes/v${VERSION}/release_notes.md" ]; then
+            cp "./.runtime_ci/release_notes/v${VERSION}/release_notes.md" /tmp/release_notes_body.md
           fi
 
+          # List what we found
           echo "Release notes contents:"
-          ls -la "./release_notes/v${VERSION}/" 2>/dev/null || echo "(empty)"
+          ls -la "./.runtime_ci/release_notes/v${VERSION}/" 2>/dev/null || echo "(empty)"
 
+      # Merge all downloaded audit trail artifacts from different jobs into
+      # a single .runtime_ci/runs/ directory so archive-run can find them.
       - name: Merge CI/CD audit trails
         continue-on-error: true
         run: |
           dart run runtime_ci_tooling:manage_cicd merge-audit-trails \
-            --incoming-dir .cicd_runs_incoming \
-            --output-dir .cicd_runs
+            --incoming-dir .runtime_ci/runs_incoming \
+            --output-dir .runtime_ci/runs
 
+      # Archive BEFORE create-release so .runtime_ci/audit/ is committed alongside
+      # the release. This replaces the old post-release archive that could
+      # never work because .runtime_ci/runs/ didn't exist on the fresh runner.
       - name: Archive audit trail
         run: |
           dart run runtime_ci_tooling:manage_cicd archive-run \
@@ -655,9 +653,6 @@ jobs:
           git config --global url."https://x-access-token:${TOKEN}@github.com/open-runtime/".insteadOf "git@github.com:open-runtime/"
           git config --global url."https://x-access-token:${TOKEN}@github.com/pieces-app/".insteadOf "git@github.com:pieces-app/"
 
-      - name: Skip LFS for dependency clones
-        run: git lfs install --skip-smudge
-
       - uses: dart-lang/setup-dart@v1.7.1
         with:
           sdk: "3.9.2"
@@ -683,7 +678,6 @@ jobs:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-mcp-v1
           restore-keys: ${{ runner.os }}-go-mcp-
-
       - uses: actions/download-artifact@v7.0.0
         continue-on-error: true
         with:
