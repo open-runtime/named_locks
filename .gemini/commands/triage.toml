@@ -1,0 +1,36 @@
+description = "Triage a GitHub issue: classify, prioritize, detect duplicates. Usage: /triage 42"
+
+prompt = """
+Triage GitHub issue #{{args}} for the !{grep '^name:' pubspec.yaml | sed 's/name: //'} package.
+
+## Issue Details
+```
+!{gh issue view {{args}} --json number,title,body,author,labels,createdAt --jq '"#\\(.number): \\(.title)\\nAuthor: @\\(.author.login)\\nLabels: \\([.labels[].name] | join(", "))\\nCreated: \\(.createdAt)\\n\\n\\(.body)"' 2>/dev/null || echo "Could not fetch issue"}
+```
+
+## Package Structure
+```
+!{tree lib/ -L 2 --dirsfirst -d}
+```
+
+## Open Issues (for duplicate detection)
+```
+!{gh issue list --state open --limit 50 --json number,title,labels --jq '.[] | "#\\(.number): \\(.title) [\\([.labels[].name] | join(", "))]"' 2>/dev/null || echo "Could not list issues"}
+```
+
+## Triage Tasks
+
+1. **Type**: Classify as one of: bug, feature-request, enhancement, documentation, question
+2. **Priority**: Assign P0-critical, P1-high, P2-medium, or P3-low
+3. **Area**: Classify area(s): proto, ml-models, core, provisioning, grpc, crypto, googleapis, ci-cd, docs
+4. **Duplicates**: Check open issues for duplicates (HIGH/MEDIUM/LOW confidence)
+5. **Comment**: Draft a helpful, welcoming comment for the reporter
+
+## Actions
+
+Apply your triage using gh CLI:
+- `gh issue edit {{args}} --add-label "<type>"`
+- `gh issue edit {{args}} --add-label "<priority>"`
+- `gh issue edit {{args}} --add-label "area/<area>"`
+- `gh issue comment {{args}} --body "<comment>"`
+"""

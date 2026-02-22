@@ -1,37 +1,43 @@
 import 'dart:io' show Platform, sleep;
 
-import "package:runtime_native_semaphores/runtime_native_semaphores.dart" show LatePropertyAssigned, NativeSemaphore, NativeSemaphores, UnixSemaphore, WindowsSemaphore;
+import "package:runtime_native_semaphores/runtime_native_semaphores.dart"
+    show LatePropertyAssigned, NativeSemaphore, NativeSemaphores, UnixSemaphore, WindowsSemaphore;
 import 'execution_call.dart' show ExecutionCall;
 import 'lock_counter.dart' show LockCount, LockCountDeletion, LockCountUpdate, LockCounter, LockCounters, LockCounts;
 import 'lock_identity.dart' show LockIdentities, LockIdentity;
 
 class NamedLocks<
-    I extends LockIdentity,
-    IS extends LockIdentities<I>,
-    CU extends LockCountUpdate,
-    CD extends LockCountDeletion,
-    CT extends LockCount<CU, CD>,
-    CTS extends LockCounts<CU, CD, CT>,
-    CTR extends LockCounter<I, CU, CD, CT, CTS>,
-    CTRS extends LockCounters<I, CU, CD, CT, CTS, CTR>,
-    /* UnixLock and WindowsLock extend NativeSemaphore */
-    NL extends NativeSemaphore<I, IS, CU, CD, CT, CTS, CTR, CTRS>
-    /* formatting guard comment */
-    > extends NativeSemaphores<I, IS, CU, CD, CT, CTS, CTR, CTRS, NL> {
+  I extends LockIdentity,
+  IS extends LockIdentities<I>,
+  CU extends LockCountUpdate,
+  CD extends LockCountDeletion,
+  CT extends LockCount<CU, CD>,
+  CTS extends LockCounts<CU, CD, CT>,
+  CTR extends LockCounter<I, CU, CD, CT, CTS>,
+  CTRS extends LockCounters<I, CU, CD, CT, CTS, CTR>,
+  /* UnixLock and WindowsLock extend NativeSemaphore */
+  NL extends NativeSemaphore<I, IS, CU, CD, CT, CTS, CTR, CTRS>
+  /* formatting guard comment */
+>
+    extends NativeSemaphores<I, IS, CU, CD, CT, CTS, CTR, CTRS, NL> {
   static final Map<String, dynamic> __instantiations = {};
 
+  // Instance registry for debugging and introspection.
+  // ignore: unused_field
   final Map<String, dynamic> _instantiations = NamedLocks.__instantiations;
 }
 
 class UnixLock<
-    I extends LockIdentity,
-    IS extends LockIdentities<I>,
-    CU extends LockCountUpdate,
-    CD extends LockCountDeletion,
-    CT extends LockCount<CU, CD>,
-    CTS extends LockCounts<CU, CD, CT>,
-    CTR extends LockCounter<I, CU, CD, CT, CTS>,
-    CTRS extends LockCounters<I, CU, CD, CT, CTS, CTR>> extends UnixSemaphore<I, IS, CU, CD, CT, CTS, CTR, CTRS> {
+  I extends LockIdentity,
+  IS extends LockIdentities<I>,
+  CU extends LockCountUpdate,
+  CD extends LockCountDeletion,
+  CT extends LockCount<CU, CD>,
+  CTS extends LockCounts<CU, CD, CT>,
+  CTR extends LockCounter<I, CU, CD, CT, CTS>,
+  CTRS extends LockCounters<I, CU, CD, CT, CTS, CTR>
+>
+    extends UnixSemaphore<I, IS, CU, CD, CT, CTS, CTR, CTRS> {
   @override
   late final String name;
 
@@ -43,6 +49,8 @@ class UnixLock<
 
   static late final dynamic __instances;
 
+  // Instance registry for debugging and introspection.
+  // ignore: unused_element
   dynamic get _instances => UnixLock.__instances;
 
   UnixLock({required String super.name, required CTR super.counter, super.verbose = false}) : super() {
@@ -51,18 +59,18 @@ class UnixLock<
   }
 
   static UnixLock<I, IS, CU, CD, CT, CTS, CTR, CTRS> instantiate<
-      I extends LockIdentity,
-      IS extends LockIdentities<I>,
-      CU extends LockCountUpdate,
-      CD extends LockCountDeletion,
-      CT extends LockCount<CU, CD>,
-      CTS extends LockCounts<CU, CD, CT>,
-      CTR extends LockCounter<I, CU, CD, CT, CTS>,
-      CTRS extends LockCounters<I, CU, CD, CT, CTS, CTR>,
-      UL extends UnixLock<I, IS, CU, CD, CT, CTS, CTR, CTRS>,
-      NLS extends NamedLocks<I, IS, CU, CD, CT, CTS, CTR, CTRS, UL>
-      /* formatting guard comment */
-      >({required String name, I? identity, CTR? counter, bool verbose = false}) {
+    I extends LockIdentity,
+    IS extends LockIdentities<I>,
+    CU extends LockCountUpdate,
+    CD extends LockCountDeletion,
+    CT extends LockCount<CU, CD>,
+    CTS extends LockCounts<CU, CD, CT>,
+    CTR extends LockCounter<I, CU, CD, CT, CTS>,
+    CTRS extends LockCounters<I, CU, CD, CT, CTS, CTR>,
+    UL extends UnixLock<I, IS, CU, CD, CT, CTS, CTR, CTRS>,
+    NLS extends NamedLocks<I, IS, CU, CD, CT, CTS, CTR, CTRS, UL>
+    /* formatting guard comment */
+  >({required String name, I? identity, CTR? counter, bool verbose = false}) {
     if (!LatePropertyAssigned<NLS>(() => __instances)) {
       __instances = NamedLocks<I, IS, CU, CD, CT, CTS, CTR, CTRS, UL>();
 
@@ -75,30 +83,32 @@ class UnixLock<
             name: name,
             semaphore: Platform.isMacOS || Platform.isLinux
                 ? UnixLock(
-                    name: name,
-                    counter: counter ??
-                        LockCounter.instantiate<I, CU, CD, CT, CTS, CTR, CTRS>(
-                          identity: identity ??
-                              LockIdentity.instantiate<I, IS>(
-                                name: name,
-                              ) as I,
-                        ) as CTR,
-                    verbose: verbose,
-                  ) as UL
+                        name: name,
+                        counter:
+                            counter ??
+                            LockCounter.instantiate<I, CU, CD, CT, CTS, CTR, CTRS>(
+                                  identity: identity ?? LockIdentity.instantiate<I, IS>(name: name) as I,
+                                )
+                                as CTR,
+                        verbose: verbose,
+                      )
+                      as UL
                 : throw Exception('Platform is not Unix.'),
           );
   }
 }
 
 class WindowsLock<
-    I extends LockIdentity,
-    IS extends LockIdentities<I>,
-    CU extends LockCountUpdate,
-    CD extends LockCountDeletion,
-    CT extends LockCount<CU, CD>,
-    CTS extends LockCounts<CU, CD, CT>,
-    CTR extends LockCounter<I, CU, CD, CT, CTS>,
-    CTRS extends LockCounters<I, CU, CD, CT, CTS, CTR>> extends WindowsSemaphore<I, IS, CU, CD, CT, CTS, CTR, CTRS> {
+  I extends LockIdentity,
+  IS extends LockIdentities<I>,
+  CU extends LockCountUpdate,
+  CD extends LockCountDeletion,
+  CT extends LockCount<CU, CD>,
+  CTS extends LockCounts<CU, CD, CT>,
+  CTR extends LockCounter<I, CU, CD, CT, CTS>,
+  CTRS extends LockCounters<I, CU, CD, CT, CTS, CTR>
+>
+    extends WindowsSemaphore<I, IS, CU, CD, CT, CTS, CTR, CTRS> {
   @override
   late final String name;
 
@@ -107,6 +117,8 @@ class WindowsLock<
 
   static late final dynamic __instances;
 
+  // Instance registry for debugging and introspection.
+  // ignore: unused_element
   dynamic get _instances => WindowsLock.__instances;
 
   WindowsLock({required String super.name, required CTR super.counter, super.verbose}) : super() {
@@ -115,18 +127,18 @@ class WindowsLock<
   }
 
   static WindowsLock<I, IS, CU, CD, CT, CTS, CTR, CTRS> instantiate<
-      I extends LockIdentity,
-      IS extends LockIdentities<I>,
-      CU extends LockCountUpdate,
-      CD extends LockCountDeletion,
-      CT extends LockCount<CU, CD>,
-      CTS extends LockCounts<CU, CD, CT>,
-      CTR extends LockCounter<I, CU, CD, CT, CTS>,
-      CTRS extends LockCounters<I, CU, CD, CT, CTS, CTR>,
-      WL extends WindowsLock<I, IS, CU, CD, CT, CTS, CTR, CTRS>,
-      NLS extends NamedLocks<I, IS, CU, CD, CT, CTS, CTR, CTRS, WL>
-      /* formatting guard comment */
-      >({required String name, I? identity, CTR? counter, bool verbose = false}) {
+    I extends LockIdentity,
+    IS extends LockIdentities<I>,
+    CU extends LockCountUpdate,
+    CD extends LockCountDeletion,
+    CT extends LockCount<CU, CD>,
+    CTS extends LockCounts<CU, CD, CT>,
+    CTR extends LockCounter<I, CU, CD, CT, CTS>,
+    CTRS extends LockCounters<I, CU, CD, CT, CTS, CTR>,
+    WL extends WindowsLock<I, IS, CU, CD, CT, CTS, CTR, CTRS>,
+    NLS extends NamedLocks<I, IS, CU, CD, CT, CTS, CTR, CTRS, WL>
+    /* formatting guard comment */
+  >({required String name, I? identity, CTR? counter, bool verbose = false}) {
     if (!LatePropertyAssigned<NLS>(() => __instances)) {
       __instances = NamedLocks<I, IS, CU, CD, CT, CTS, CTR, CTRS, WL>();
 
@@ -139,34 +151,48 @@ class WindowsLock<
             name: name,
             semaphore: Platform.isWindows
                 ? WindowsLock(
-                    name: name,
-                    counter: counter ??
-                        LockCounter.instantiate<I, CU, CD, CT, CTS, CTR, CTRS>(
-                          identity: identity ??
-                              LockIdentity.instantiate<I, IS>(
-                                name: name,
-                              ) as I,
-                        ) as CTR,
-                    verbose: verbose,
-                  ) as WL
+                        name: name,
+                        counter:
+                            counter ??
+                            LockCounter.instantiate<I, CU, CD, CT, CTS, CTR, CTRS>(
+                                  identity: identity ?? LockIdentity.instantiate<I, IS>(name: name) as I,
+                                )
+                                as CTR,
+                        verbose: verbose,
+                      )
+                      as WL
                 : throw Exception('Platform is not Windows.'),
           );
   }
 }
 
-typedef LockType<I extends LockIdentity, IS extends LockIdentities<I>, CU extends LockCountUpdate, CD extends LockCountDeletion, CT extends LockCount<CU, CD>,
-        CTS extends LockCounts<CU, CD, CT>, CTR extends LockCounter<I, CU, CD, CT, CTS>, CTRS extends LockCounters<I, CU, CD, CT, CTS, CTR>>
-    = NativeSemaphore<I, IS, CU, CD, CT, CTS, CTR, CTRS>;
+typedef LockType<
+  I extends LockIdentity,
+  IS extends LockIdentities<I>,
+  CU extends LockCountUpdate,
+  CD extends LockCountDeletion,
+  CT extends LockCount<CU, CD>,
+  CTS extends LockCounts<CU, CD, CT>,
+  CTR extends LockCounter<I, CU, CD, CT, CTS>,
+  CTRS extends LockCounters<I, CU, CD, CT, CTS, CTR>
+> = NativeSemaphore<I, IS, CU, CD, CT, CTS, CTR, CTRS>;
 
 class NamedLock {
   // Guard will create a new lock fo you with the given lock name
   // Guard and execute some code with the lock held and released it the internal execution completes
-  static ExecutionCall<R, E> guard<R, E extends Exception>(
-      {required String name, required ExecutionCall<R, E> execution, Duration timeout = const Duration(seconds: 5), bool verbose = false, String? waiting}) {
+  static ExecutionCall<R, E> guard<R, E extends Exception>({
+    required String name,
+    required ExecutionCall<R, E> execution,
+    Duration timeout = const Duration(seconds: 5),
+    bool verbose = false,
+    String? waiting,
+  }) {
     execution.guarding = true;
 
     LockType lock = Platform.isWindows ? WindowsLock.instantiate(name: name) : UnixLock.instantiate(name: name);
-    !lock.opened && lock.open() || lock.opened || (throw Exception('Failed to open semaphore before guarded code execution.'));
+    !lock.opened && lock.open() ||
+        lock.opened ||
+        (throw Exception('Failed to open semaphore before guarded code execution.'));
 
     DateTime now = DateTime.now();
     Duration _sleep = Duration(milliseconds: 2);
@@ -191,33 +217,51 @@ class NamedLock {
         throw Exception('NamedLock.guard has failed to acquire lock within $timeout.');
       }
 
-      if (verbose) print('NamedLock is not locked: $locked within the NamedLock.guard execution loop and about to try to lock the lock.');
+      if (verbose)
+        print(
+          'NamedLock is not locked: $locked within the NamedLock.guard execution loop and about to try to lock the lock.',
+        );
       locked = lock.lock();
 
       if (locked) {
-        if (verbose) print('NamedLock is locked: $locked within the NamedLock.guard execution loop and about to execute ExecutionCall.callable()');
+        if (verbose)
+          print(
+            'NamedLock is locked: $locked within the NamedLock.guard execution loop and about to execute ExecutionCall.callable()',
+          );
         execution.execute();
 
-        if (verbose) print('NamedLock is locked: $locked within the NamedLock.guard execution loop and has executed ExecutionCall.callable()');
+        if (verbose)
+          print(
+            'NamedLock is locked: $locked within the NamedLock.guard execution loop and has executed ExecutionCall.callable()',
+          );
 
-        if (verbose) print('NamedLock is locked: $locked within the NamedLock.guard execution loop and about to unlock the lock.');
+        if (verbose)
+          print('NamedLock is locked: $locked within the NamedLock.guard execution loop and about to unlock the lock.');
         lock.unlock();
 
-        if (verbose) print('NamedLock is unlocked: ${!locked} within the NamedLock.guard execution loop and about to close.');
+        if (verbose)
+          print('NamedLock is unlocked: ${!locked} within the NamedLock.guard execution loop and about to close.');
         lock.close();
 
-        if (verbose) print('NamedLock is closed: ${!lock.opened} within the NamedLock.guard execution loop and about to unlink the named lock.');
+        if (verbose)
+          print(
+            'NamedLock is closed: ${!lock.opened} within the NamedLock.guard execution loop and about to unlink the named lock.',
+          );
         lock.unlink();
 
-        if (verbose) print('NamedLock is unlocked, closed, and unlinked within the NamedLock.guard execution loop and about to return the execution.');
+        if (verbose)
+          print(
+            'NamedLock is unlocked, closed, and unlinked within the NamedLock.guard execution loop and about to return the execution.',
+          );
       } else {
         if (verbose)
           print(
-              'NamedLock is not locked: $locked within the NamedLock.guard execution loop and about to sleep for ${_sleep.inMilliseconds} milliseconds due to the lock not being acquired.');
+            'NamedLock is not locked: $locked within the NamedLock.guard execution loop and about to sleep for ${_sleep.inMilliseconds} milliseconds due to the lock not being acquired.',
+          );
         sleep(_sleep);
 
         // On first attempt if we are not locked we can print the waiting message
-        if(_attempt == 1 && waiting is String) {
+        if (_attempt == 1 && waiting is String) {
           print(waiting);
           waiting = null;
         }
@@ -225,11 +269,13 @@ class NamedLock {
         _sleep = Duration(milliseconds: (_sleep.inMilliseconds + _attempt * 10).clamp(5, 500));
         if (verbose)
           print(
-              'NamedLock is not locked: $locked within the NamedLock.guard execution loop and has slept for ${_sleep.inMilliseconds} milliseconds due to the lock not being acquired.');
+            'NamedLock is not locked: $locked within the NamedLock.guard execution loop and has slept for ${_sleep.inMilliseconds} milliseconds due to the lock not being acquired.',
+          );
         _attempt++;
         if (verbose)
           print(
-              'NamedLock is not locked: $locked within the NamedLock.guard execution loop and about to try to lock the lock again. It is on attempt $_attempt and will sleep for ${_sleep.inMilliseconds} milliseconds if lock is not acquired this time.');
+            'NamedLock is not locked: $locked within the NamedLock.guard execution loop and about to try to lock the lock again. It is on attempt $_attempt and will sleep for ${_sleep.inMilliseconds} milliseconds if lock is not acquired this time.',
+          );
       }
 
       // If we are safe or there is no error, return the execution otherwise throw the error

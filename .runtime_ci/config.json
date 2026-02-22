@@ -103,5 +103,20 @@
     ],
     "sentry_token_env": "SENTRY_ACCESS_TOKEN",
     "gcp_secret_name": ""
+  },
+  "ci": {
+    "dart_sdk": "3.9.2",
+    "line_length": 120,
+    "personal_access_token_secret": "TSAVO_AT_PIECES_PERSONAL_ACCESS_TOKEN",
+    "features": {
+      "proto": false,
+      "lfs": false,
+      "format_check": true,
+      "analysis_cache": false,
+      "managed_analyze": false,
+      "managed_test": false
+    },
+    "secrets": {},
+    "sub_packages": []
   }
 }

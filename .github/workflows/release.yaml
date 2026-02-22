@@ -193,6 +193,7 @@ jobs:
         with:
           name: issue-manifest
           path: /tmp/issue_manifest.json
+          if-no-files-found: error
           retention-days: 1
 
       - name: Upload CI/CD audit trail
@@ -277,7 +278,7 @@ jobs:
             /tmp/commit_analysis.json
             /tmp/pr_data.json
             /tmp/breaking_changes.json
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 1
 
       - name: Upload CI/CD audit trail
@@ -336,13 +337,11 @@ jobs:
           key: ${{ runner.os }}-go-mcp-v1
           restore-keys: ${{ runner.os }}-go-mcp-
       - uses: actions/download-artifact@v7.0.0
-        continue-on-error: true
         with:
           name: stage1-artifacts
           path: /tmp/
 
       - uses: actions/download-artifact@v7.0.0
-        continue-on-error: true
         with:
           name: issue-manifest
           path: /tmp/
@@ -365,21 +364,13 @@ jobs:
             --prev-tag "${{ needs.determine-version.outputs.prev_tag }}" \
             --version "${{ needs.determine-version.outputs.new_version }}"
 
-      - name: Autodoc (module documentation)
-        env:
-          GEMINI_API_KEY: ${{ secrets.CICD_GEMINI_API_KEY_OPEN_RUNTIME }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: dart run runtime_ci_tooling:manage_cicd autodoc
-
       - uses: actions/upload-artifact@v6.0.0
         with:
           name: composed-artifacts
           path: |
             CHANGELOG.md
             README.md
-            docs/
-            .runtime_ci/autodoc.json
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 1
 
       - name: Upload CI/CD audit trail
@@ -391,10 +382,113 @@ jobs:
           retention-days: 1
 
   # ============================================================================
-  # Job 5: Stage 3 -- Release Notes Author
+  # Job 5: Autodoc (module documentation) — runs parallel to release-notes
+  # Commits docs/ and autodoc.json to main early so work is preserved even if
+  # create-release subsequently fails.
+  # ============================================================================
+  autodoc:
+    name: "Autodoc (module documentation)"
+    needs: [determine-version]
+    if: needs.determine-version.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.TSAVO_AT_PIECES_PERSONAL_ACCESS_TOKEN }}
+          persist-credentials: true
+
+      - name: Configure Git for HTTPS with Token
+        shell: bash
+        run: |
+          TOKEN="${{ secrets.TSAVO_AT_PIECES_PERSONAL_ACCESS_TOKEN }}"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "git@github.com:"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "ssh://git@github.com/"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/open-runtime/".insteadOf "git@github.com:open-runtime/"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/pieces-app/".insteadOf "git@github.com:pieces-app/"
+
+      - name: Set up Dart
+        uses: dart-lang/setup-dart@v1.7.1
+        with:
+          sdk: 3.9.2
+
+      - name: Cache Dart pub
+        uses: actions/cache@v5.0.3
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: ${{ runner.os }}-pub-
+
+      - name: Install dependencies
+        run: dart pub get
+
+      - uses: actions/setup-node@v6.2.0
+        with:
+          node-version: "22"
+
+      - run: npm install -g @google/gemini-cli@latest
+
+      - name: Cache Go modules (GitHub MCP server)
+        uses: actions/cache@v5.0.3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-mcp-v1
+          restore-keys: ${{ runner.os }}-go-mcp-
+
+      - name: Generate module documentation
+        env:
+          GEMINI_API_KEY: ${{ secrets.CICD_GEMINI_API_KEY_OPEN_RUNTIME }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: dart run runtime_ci_tooling:manage_cicd autodoc
+
+      - name: Create fallback autodoc artifacts if missing
+        shell: bash
+        run: |
+          mkdir -p docs .runtime_ci
+          if [ ! -f .runtime_ci/autodoc.json ]; then
+            echo '{"modules":[],"note":"Gemini unavailable - documentation not generated"}' > .runtime_ci/autodoc.json
+            echo "Created fallback autodoc.json"
+          fi
+
+      - name: Commit generated documentation to main
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/ .runtime_ci/autodoc.json || true
+          if ! git diff --cached --quiet; then
+            git commit -m "bot(autodocs): update generated documentation [skip ci]"
+            git push origin main
+            echo "Documentation committed and pushed to main."
+          else
+            echo "No documentation changes to commit."
+          fi
+
+      - name: Upload autodoc artifacts
+        uses: actions/upload-artifact@v6.0.0
+        with:
+          name: autodoc-artifacts
+          path: |
+            docs/
+            .runtime_ci/autodoc.json
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Upload CI/CD audit (autodoc)
+        if: always()
+        uses: actions/upload-artifact@v6.0.0
+        with:
+          name: cicd-audit-autodoc
+          path: .runtime_ci/runs/
+          if-no-files-found: ignore
+          retention-days: 1
+
+  # ============================================================================
+  # Job 6: Stage 3 -- Release Notes Author
   # ============================================================================
   release-notes:
-    needs: [determine-version, explore-changes, pre-release-triage, compose-artifacts]
+    needs: [determine-version, explore-changes, pre-release-triage, compose-artifacts, autodoc]
     if: needs.determine-version.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     steps:
@@ -439,19 +533,16 @@ jobs:
           restore-keys: ${{ runner.os }}-go-mcp-
       # Download ALL previous stage artifacts for context
       - uses: actions/download-artifact@v7.0.0
-        continue-on-error: true
         with:
           name: stage1-artifacts
           path: /tmp/
 
       - uses: actions/download-artifact@v7.0.0
-        continue-on-error: true
         with:
           name: issue-manifest
           path: /tmp/
 
       - uses: actions/download-artifact@v7.0.0
-        continue-on-error: true
         with:
           name: composed-artifacts
           path: ./artifacts/
@@ -461,6 +552,11 @@ jobs:
         with:
           name: version-bump-rationale
           path: ./.runtime_ci/version_bumps/
+
+      - uses: actions/download-artifact@v7.0.0
+        with:
+          name: autodoc-artifacts
+          path: ./autodoc-artifacts/
 
       # Copy CHANGELOG from compose stage so release notes can reference it
       - name: Apply compose artifacts
@@ -493,11 +589,21 @@ jobs:
           echo "Contents of .runtime_ci/release_notes/v${VERSION}/:"
           ls -la ".runtime_ci/release_notes/v${VERSION}/" 2>/dev/null || echo "(empty)"
 
+      - name: Ensure release notes artifact is non-empty
+        shell: bash
+        run: |
+          VERSION="${{ needs.determine-version.outputs.new_version }}"
+          mkdir -p ".runtime_ci/release_notes/v${VERSION}"
+          if [ ! -f ".runtime_ci/release_notes/v${VERSION}/release_notes_body.md" ]; then
+            echo "Release notes unavailable for v${VERSION}." > ".runtime_ci/release_notes/v${VERSION}/release_notes_body.md"
+            echo "Created fallback release_notes_body.md"
+          fi
+
       - uses: actions/upload-artifact@v6.0.0
         with:
           name: release-notes-artifacts
           path: .runtime_ci/release_notes/
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 1
 
       - name: Upload CI/CD audit trail
@@ -548,13 +654,11 @@ jobs:
       - run: dart pub get
 
       - uses: actions/download-artifact@v7.0.0
-        continue-on-error: true
         with:
           name: composed-artifacts
           path: ./artifacts/
 
       - uses: actions/download-artifact@v7.0.0
-        continue-on-error: true
         with:
           name: release-notes-artifacts
           path: ./release-notes-artifacts/
@@ -679,7 +783,6 @@ jobs:
           key: ${{ runner.os }}-go-mcp-v1
           restore-keys: ${{ runner.os }}-go-mcp-
       - uses: actions/download-artifact@v7.0.0
-        continue-on-error: true
         with:
           name: issue-manifest
           path: /tmp/

@@ -16,6 +16,9 @@ permissions:
 
 env:
   GEMINI_API_KEY: ${{ secrets.CICD_GEMINI_API_KEY_OPEN_RUNTIME }}
+  OPENAI_API_KEY: ${{ secrets.OPEN_AI_API_KEY_GLOBAL_CLOUD_RUNTIME }}
+  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY_GLOBAL_CLOUD_RUNTIME }}
+  AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.OPEN_RUNTIME_AWS_BEDROCK_API_KEY }}
 
 jobs:
   triage:
@@ -54,10 +57,6 @@ jobs:
           git config --global url."https://x-access-token:${TOKEN}@github.com/open-runtime/".insteadOf "git@github.com:open-runtime/"
           git config --global url."https://x-access-token:${TOKEN}@github.com/pieces-app/".insteadOf "git@github.com:pieces-app/"
 
-      - name: Skip LFS for dependency clones
-        if: steps.trigger.outputs.run == 'true'
-        run: git lfs install --skip-smudge
-
       - uses: dart-lang/setup-dart@v1.7.1
         if: steps.trigger.outputs.run == 'true'
         with:
@@ -80,7 +79,6 @@ jobs:
           node-version: "22"
 
       - run: npm install -g @google/gemini-cli@latest
-        if: steps.trigger.outputs.run == 'true'
 
       - name: Cache Go modules (GitHub MCP server)
         if: steps.trigger.outputs.run == 'true'
