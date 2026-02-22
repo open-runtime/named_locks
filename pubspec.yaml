@@ -8,7 +8,9 @@ publish_to: none
 environment:
   sdk: ^3.9.0
 
-resolution: workspace
+# NOTE: When used inside the aot_monorepo workspace, add
+# `resolution: workspace` here. It is intentionally omitted so this
+# package can also resolve standalone (e.g., in its own CI pipeline).
 
 platforms:
   linux:
@@ -17,7 +19,11 @@ platforms:
 
 dependencies:
   stack_trace: ^1.11.1
-  runtime_native_semaphores: ^1.0.0-beta.7
+  runtime_native_semaphores:
+    git:
+      url: git@github.com:open-runtime/native_semaphores.git
+      tag_pattern: v{{version}}
+    version: ^1.0.0-beta.7
 
 dev_dependencies:
   runtime_ci_tooling:
