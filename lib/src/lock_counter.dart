@@ -1,13 +1,16 @@
-import 'package:runtime_named_locks/src/lock_identity.dart';
+// Generic names in this file intentionally mirror the semaphore abstractions.
+// ignore_for_file: avoid_types_as_parameter_names
+
 import 'package:runtime_native_semaphores/runtime_native_semaphores.dart';
 
+import 'lock_identity.dart';
+
 class LockCountUpdate extends SemaphoreCountUpdate {
-  LockCountUpdate({required String identifier, int? from = null, required int to})
-    : super(identifier: identifier, from: from, to: to);
+  LockCountUpdate({required super.identifier, required super.to, super.from});
 }
 
 class LockCountDeletion extends SemaphoreCountDeletion {
-  LockCountDeletion({required String identifier, int? at = null}) : super(identifier: identifier, at: at);
+  LockCountDeletion({required super.identifier, super.at});
 }
 
 class LockCount<CU extends LockCountUpdate, CD extends LockCountDeletion> extends SemaphoreCount<CU, CD> {
@@ -16,12 +19,11 @@ class LockCount<CU extends LockCountUpdate, CD extends LockCountDeletion> extend
   @override
   Map<String, int?> get counts => LockCount.__counts;
 
-  LockCount({required String identifier, required String forProperty})
-    : super(identifier: identifier, forProperty: forProperty);
+  LockCount({required super.identifier, required super.forProperty});
 
   @override
   CU update({required int value}) {
-    CU _update =
+    final update =
         LockCountUpdate(
               identifier: identifier,
               from: counts.putIfAbsent(identifier, () => null) ?? counts[identifier],
@@ -30,28 +32,29 @@ class LockCount<CU extends LockCountUpdate, CD extends LockCountDeletion> extend
             as CU;
 
     if (verbose)
-      _update.from == null
-          ? print("Lock count for $identifier initialized to ${_update.to}.")
-          : print("Lock count for $identifier updated from ${_update.from} to ${_update.to}.");
+      update.from == null
+          ? print('Lock count for $identifier initialized to ${update.to}.')
+          : print('Lock count for $identifier updated from ${update.from} to ${update.to}.');
 
-    return _update;
+    return update;
   }
 
+  @override
   CD delete() {
-    CD _deletion = LockCountDeletion(identifier: identifier, at: counts.remove(identifier)) as CD;
+    final deletion = LockCountDeletion(identifier: identifier, at: counts.remove(identifier)) as CD;
 
     if (verbose)
-      _deletion.at == null
-          ? print("Lock count for $identifier does not exist.")
-          : print("Lock count for $identifier deleted with final count at ${_deletion.at}.");
+      deletion.at == null
+          ? print('Lock count for $identifier does not exist.')
+          : print('Lock count for $identifier deleted with final count at ${deletion.at}.');
 
-    return _deletion;
+    return deletion;
   }
 }
 
 class LockCounts<CU extends LockCountUpdate, CD extends LockCountDeletion, CT extends LockCount<CU, CD>>
     extends SemaphoreCounts<CU, CD, CT> {
-  LockCounts({required CT isolate, required CT process}) : super(isolate: isolate, process: process);
+  LockCounts({required super.isolate, required super.process});
 }
 
 class LockCounters<
@@ -85,8 +88,7 @@ class LockCounter<
   // ignore: unused_element
   dynamic get _instances => LockCounter.__instances;
 
-  LockCounter({required String identifier, required I identity, required CTS counts})
-    : super(identifier: identifier, identity: identity, counts: counts);
+  LockCounter({required super.identifier, required super.identity, required super.counts});
 
   static LockCounter<I, CU, CD, CT, CTS> instantiate<
     /*  Identity */

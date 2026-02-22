@@ -27,9 +27,10 @@ class LockIdentity extends SemaphoreIdentity {
 
   String get caller => _caller;
 
+  @override
   String get uuid => [name, isolate, process, caller].join('_');
 
-  LockIdentity({required String name}) : super(name: name) {
+  LockIdentity({required super.name}) {
     _frame = CapturedCallFrame();
   }
 
@@ -44,7 +45,5 @@ class LockIdentity extends SemaphoreIdentity {
   }
 
   @override
-  String toString() {
-    return 'LockIdentity(name: $name, isolate: $isolate, process: $process, caller: $_caller)';
-  }
+  String toString() => 'LockIdentity(name: $name, isolate: $isolate, process: $process, caller: $_caller)';
 }

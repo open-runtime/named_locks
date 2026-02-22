@@ -1,6 +1,6 @@
 import 'dart:io' show Platform, sleep;
 
-import "package:runtime_native_semaphores/runtime_native_semaphores.dart"
+import 'package:runtime_native_semaphores/runtime_native_semaphores.dart'
     show LatePropertyAssigned, NativeSemaphore, NativeSemaphores, UnixSemaphore, WindowsSemaphore;
 import 'execution_call.dart' show ExecutionCall;
 import 'lock_counter.dart' show LockCount, LockCountDeletion, LockCountUpdate, LockCounter, LockCounters, LockCounts;
@@ -39,12 +39,6 @@ class UnixLock<
 >
     extends UnixSemaphore<I, IS, CU, CD, CT, CTS, CTR, CTRS> {
   @override
-  late final String name;
-
-  @override
-  late final CTR counter;
-
-  @override
   I get identity => counter.identity;
 
   static late final dynamic __instances;
@@ -53,10 +47,7 @@ class UnixLock<
   // ignore: unused_element
   dynamic get _instances => UnixLock.__instances;
 
-  UnixLock({required String super.name, required CTR super.counter, super.verbose = false}) : super() {
-    this.name = super.name;
-    this.counter = super.counter;
-  }
+  UnixLock({required super.name, required super.counter, super.verbose = false}) : super();
 
   static UnixLock<I, IS, CU, CD, CT, CTS, CTR, CTRS> instantiate<
     I extends LockIdentity,
@@ -74,7 +65,7 @@ class UnixLock<
     if (!LatePropertyAssigned<NLS>(() => __instances)) {
       __instances = NamedLocks<I, IS, CU, CD, CT, CTS, CTR, CTRS, UL>();
 
-      if (verbose) print('Setting UnixLock._instances: ${__instances}');
+      if (verbose) print('Setting UnixLock._instances: $__instances');
     }
 
     return (__instances as NLS).has<UL>(name: name)
@@ -109,22 +100,13 @@ class WindowsLock<
   CTRS extends LockCounters<I, CU, CD, CT, CTS, CTR>
 >
     extends WindowsSemaphore<I, IS, CU, CD, CT, CTS, CTR, CTRS> {
-  @override
-  late final String name;
-
-  @override
-  late final CTR counter;
-
   static late final dynamic __instances;
 
   // Instance registry for debugging and introspection.
   // ignore: unused_element
   dynamic get _instances => WindowsLock.__instances;
 
-  WindowsLock({required String super.name, required CTR super.counter, super.verbose}) : super() {
-    this.name = super.name;
-    this.counter = super.counter;
-  }
+  WindowsLock({required super.name, required super.counter, super.verbose}) : super();
 
   static WindowsLock<I, IS, CU, CD, CT, CTS, CTR, CTRS> instantiate<
     I extends LockIdentity,
@@ -142,7 +124,7 @@ class WindowsLock<
     if (!LatePropertyAssigned<NLS>(() => __instances)) {
       __instances = NamedLocks<I, IS, CU, CD, CT, CTS, CTR, CTRS, WL>();
 
-      if (verbose) print('Setting WindowsLock._instances: ${__instances}');
+      if (verbose) print('Setting WindowsLock._instances: $__instances');
     }
 
     return (__instances as NLS).has<WL>(name: name)
@@ -189,31 +171,31 @@ class NamedLock {
   }) {
     execution.guarding = true;
 
-    LockType lock = Platform.isWindows ? WindowsLock.instantiate(name: name) : UnixLock.instantiate(name: name);
+    final LockType lock = Platform.isWindows ? WindowsLock.instantiate(name: name) : UnixLock.instantiate(name: name);
     !lock.opened && lock.open() ||
         lock.opened ||
         (throw Exception('Failed to open semaphore before guarded code execution.'));
 
-    DateTime now = DateTime.now();
-    Duration _sleep = Duration(milliseconds: 2);
+    final now = DateTime.now();
+    var waitDuration = const Duration(milliseconds: 2);
 
-    int _attempt = 1;
+    var attempt = 1;
 
-    bool locked = false;
+    var locked = false;
 
     while (!locked) {
-      // TODO implement a backoff strategy
+      // TODOimplement a backoff strategy
       // Exit if the timeout has been exceeded already or if the sleep time is greater than 40% of the timeout
-      // TODO subtract sleep from timeout now.subtract(_sleep)
+      // TODOsubtract sleep from timeout now.subtract(_sleep)
       if (DateTime.now().difference(now) > timeout) {
-        // TODO try to clean up the lock here
-        // TODO pass in a force option to close & unlink
-        // TODO lock..close(force: true)..unlink(force: true);
+        // TODOtry to clean up the lock here
+        // TODOpass in a force option to close & unlink
+        // TODOlock..close(force: true):..unlink(force: true);
 
         // execution.error = Exception('Failed to acquire lock within $timeout.');
         // This will throw because error sets successful to false
         // (execution.completer.isCompleted && execution.successful) || (throw Exception('Failed to execute execution code: ${execution.error}'));
-        // TODO Poll the future here if we find one?
+        // TODOPoll the future here if we find one?
         throw Exception('NamedLock.guard has failed to acquire lock within $timeout.');
       }
 
@@ -256,25 +238,25 @@ class NamedLock {
       } else {
         if (verbose)
           print(
-            'NamedLock is not locked: $locked within the NamedLock.guard execution loop and about to sleep for ${_sleep.inMilliseconds} milliseconds due to the lock not being acquired.',
+            'NamedLock is not locked: $locked within the NamedLock.guard execution loop and about to sleep for ${waitDuration.inMilliseconds} milliseconds due to the lock not being acquired.',
           );
-        sleep(_sleep);
+        sleep(waitDuration);
 
         // On first attempt if we are not locked we can print the waiting message
-        if (_attempt == 1 && waiting is String) {
+        if (attempt == 1 && waiting is String) {
           print(waiting);
           waiting = null;
         }
 
-        _sleep = Duration(milliseconds: (_sleep.inMilliseconds + _attempt * 10).clamp(5, 500));
+        waitDuration = Duration(milliseconds: (waitDuration.inMilliseconds + attempt * 10).clamp(5, 500));
         if (verbose)
           print(
-            'NamedLock is not locked: $locked within the NamedLock.guard execution loop and has slept for ${_sleep.inMilliseconds} milliseconds due to the lock not being acquired.',
+            'NamedLock is not locked: $locked within the NamedLock.guard execution loop and has slept for ${waitDuration.inMilliseconds} milliseconds due to the lock not being acquired.',
           );
-        _attempt++;
+        attempt++;
         if (verbose)
           print(
-            'NamedLock is not locked: $locked within the NamedLock.guard execution loop and about to try to lock the lock again. It is on attempt $_attempt and will sleep for ${_sleep.inMilliseconds} milliseconds if lock is not acquired this time.',
+            'NamedLock is not locked: $locked within the NamedLock.guard execution loop and about to try to lock the lock again. It is on attempt $attempt and will sleep for ${waitDuration.inMilliseconds} milliseconds if lock is not acquired this time.',
           );
       }
 
