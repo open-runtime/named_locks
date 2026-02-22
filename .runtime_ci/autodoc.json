@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "gemini_model": "gemini-3-1-pro-preview",
+  "gemini_model": "gemini-3-pro-preview",
   "max_concurrent": 3,
   "modules": [
     {
