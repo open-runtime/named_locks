@@ -1,0 +1,46 @@
+{
+  "version": "1.0.0",
+  "gemini_model": "gemini-3-1-pro-preview",
+  "max_concurrent": 3,
+  "modules": [
+    {
+      "id": "core",
+      "name": "Named Locks Core",
+      "source_paths": [
+        "lib/src/"
+      ],
+      "lib_paths": [
+        "lib/src/"
+      ],
+      "output_path": "doc/core/",
+      "generate": [
+        "quickstart",
+        "api_reference",
+        "examples"
+      ],
+      "hash": "",
+      "last_updated": null
+    },
+    {
+      "id": "top_level",
+      "name": "Package Entry Points",
+      "source_paths": [
+        "lib/"
+      ],
+      "lib_paths": [
+        "lib/"
+      ],
+      "output_path": "doc/",
+      "generate": [
+        "quickstart"
+      ],
+      "hash": "",
+      "last_updated": null
+    }
+  ],
+  "templates": {
+    "quickstart": "scripts/prompts/autodoc_quickstart_prompt.dart",
+    "api_reference": "scripts/prompts/autodoc_api_reference_prompt.dart",
+    "examples": "scripts/prompts/autodoc_examples_prompt.dart"
+  }
+}
