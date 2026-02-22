@@ -1,0 +1,702 @@
+name: Release Pipeline
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: read
+
+env:
+  GEMINI_API_KEY: ${{ secrets.CICD_GEMINI_API_KEY_OPEN_RUNTIME }}
+
+jobs:
+  # ============================================================================
+  # Gate: Verify CI passed AND commit is not from release bot
+  # ============================================================================
+  pre-check:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+    outputs:
+      should_release: ${{ steps.gate.outputs.should_release }}
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Check for release bot commit
+        id: gate
+        run: |
+          AUTHOR=$(git log -1 --format='%an')
+          MSG=$(git log -1 --format='%s')
+          echo "Commit author: $AUTHOR"
+          echo "Commit subject: $MSG"
+          if [[ "$AUTHOR" == "github-actions[bot]" ]] || [[ "$MSG" == *"[skip ci]"* ]] || [[ "$MSG" == *"bot(release)"* ]]; then
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Release bot commit — skipping release pipeline."
+          else
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  # ============================================================================
+  # Job 1: Determine Version
+  # ============================================================================
+  determine-version:
+    needs: pre-check
+    if: needs.pre-check.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      new_version: ${{ steps.version.outputs.new_version }}
+      prev_tag: ${{ steps.version.outputs.prev_tag }}
+      should_release: ${{ steps.version.outputs.should_release }}
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Configure Git for HTTPS with Token
+        shell: bash
+        run: |
+          TOKEN="${{ secrets.TSAVO_AT_PIECES_PERSONAL_ACCESS_TOKEN || secrets.GITHUB_TOKEN }}"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "git@github.com:"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "ssh://git@github.com/"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/open-runtime/".insteadOf "git@github.com:open-runtime/"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/pieces-app/".insteadOf "git@github.com:pieces-app/"
+
+      - name: Skip LFS for dependency clones
+        run: git lfs install --skip-smudge
+
+      - uses: dart-lang/setup-dart@v1.7.1
+        with:
+          sdk: "3.9.2"
+
+      - name: Cache Dart pub dependencies
+        uses: actions/cache@v5.0.3
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-dart-pub-${{ hashFiles('**/pubspec.yaml') }}
+          restore-keys: ${{ runner.os }}-dart-pub-
+
+      - run: dart pub get
+
+      - uses: actions/setup-node@v6.2.0
+        with:
+          node-version: "22"
+
+      - run: npm install -g @google/gemini-cli@latest
+
+      - name: Cache Go modules (GitHub MCP server)
+        uses: actions/cache@v5.0.3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-mcp-v1
+          restore-keys: ${{ runner.os }}-go-mcp-
+
+      - name: Determine version
+        id: version
+        env:
+          GEMINI_API_KEY: ${{ secrets.CICD_GEMINI_API_KEY_OPEN_RUNTIME }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: dart run runtime_ci_tooling:manage_cicd determine-version --output-github-actions
+
+      - name: Upload version bump rationale
+        if: steps.version.outputs.should_release == 'true'
+        uses: actions/upload-artifact@v6.0.0
+        with:
+          name: version-bump-rationale
+          path: version_bumps/
+          retention-days: 90
+
+      - name: Upload CI/CD audit trail
+        if: steps.version.outputs.should_release == 'true'
+        uses: actions/upload-artifact@v6.0.0
+        with:
+          name: cicd-audit-determine-version
+          path: .cicd_runs/
+          if-no-files-found: ignore
+          retention-days: 1
+
+  # ============================================================================
+  # Job 2: Pre-Release Triage
+  # ============================================================================
+  pre-release-triage:
+    needs: determine-version
+    if: needs.determine-version.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Configure Git for HTTPS with Token
+        shell: bash
+        run: |
+          TOKEN="${{ secrets.TSAVO_AT_PIECES_PERSONAL_ACCESS_TOKEN || secrets.GITHUB_TOKEN }}"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "git@github.com:"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "ssh://git@github.com/"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/open-runtime/".insteadOf "git@github.com:open-runtime/"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/pieces-app/".insteadOf "git@github.com:pieces-app/"
+
+      - name: Skip LFS for dependency clones
+        run: git lfs install --skip-smudge
+
+      - uses: dart-lang/setup-dart@v1.7.1
+        with:
+          sdk: "3.9.2"
+
+      - name: Cache Dart pub dependencies
+        uses: actions/cache@v5.0.3
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-dart-pub-${{ hashFiles('**/pubspec.yaml') }}
+          restore-keys: ${{ runner.os }}-dart-pub-
+
+      - run: dart pub get
+
+      - uses: actions/setup-node@v6.2.0
+        with:
+          node-version: "22"
+
+      - run: npm install -g @google/gemini-cli@latest
+
+      - name: Cache Go modules (GitHub MCP server)
+        uses: actions/cache@v5.0.3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-mcp-v1
+          restore-keys: ${{ runner.os }}-go-mcp-
+
+      - name: Pre-release triage
+        env:
+          GEMINI_API_KEY: ${{ secrets.CICD_GEMINI_API_KEY_OPEN_RUNTIME }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          dart run runtime_ci_tooling:manage_cicd pre-release-triage \
+            --prev-tag "${{ needs.determine-version.outputs.prev_tag }}" \
+            --version "${{ needs.determine-version.outputs.new_version }}"
+
+          # Find manifest from .cicd_runs/ audit trail
+          MANIFEST=$(find .cicd_runs -name "issue_manifest.json" -type f 2>/dev/null | sort -r | head -1)
+          if [ -n "$MANIFEST" ]; then
+            cp "$MANIFEST" /tmp/issue_manifest.json
+          else
+            echo '{"version":"${{ needs.determine-version.outputs.new_version }}","github_issues":[],"sentry_issues":[],"cross_repo_issues":[]}' > /tmp/issue_manifest.json
+          fi
+
+      - uses: actions/upload-artifact@v6.0.0
+        with:
+          name: issue-manifest
+          path: /tmp/issue_manifest.json
+          retention-days: 1
+
+      - name: Upload CI/CD audit trail
+        uses: actions/upload-artifact@v6.0.0
+        with:
+          name: cicd-audit-pre-release-triage
+          path: .cicd_runs/
+          if-no-files-found: ignore
+          retention-days: 1
+
+  # ============================================================================
+  # Job 3: Stage 1 -- Explorer Agent
+  # ============================================================================
+  explore-changes:
+    needs: [determine-version, pre-release-triage]
+    if: needs.determine-version.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Configure Git for HTTPS with Token
+        shell: bash
+        run: |
+          TOKEN="${{ secrets.TSAVO_AT_PIECES_PERSONAL_ACCESS_TOKEN || secrets.GITHUB_TOKEN }}"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "git@github.com:"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "ssh://git@github.com/"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/open-runtime/".insteadOf "git@github.com:open-runtime/"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/pieces-app/".insteadOf "git@github.com:pieces-app/"
+
+      - name: Skip LFS for dependency clones
+        run: git lfs install --skip-smudge
+
+      - uses: dart-lang/setup-dart@v1.7.1
+        with:
+          sdk: "3.9.2"
+
+      - name: Cache Dart pub dependencies
+        uses: actions/cache@v5.0.3
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-dart-pub-${{ hashFiles('**/pubspec.yaml') }}
+          restore-keys: ${{ runner.os }}-dart-pub-
+
+      - run: dart pub get
+
+      - uses: actions/setup-node@v6.2.0
+        with:
+          node-version: "22"
+
+      - run: npm install -g @google/gemini-cli@latest
+
+      - name: Cache Go modules (GitHub MCP server)
+        uses: actions/cache@v5.0.3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-mcp-v1
+          restore-keys: ${{ runner.os }}-go-mcp-
+
+      - uses: actions/download-artifact@v7.0.0
+        with:
+          name: issue-manifest
+          path: /tmp/
+
+      - name: Stage 1 Explorer
+        env:
+          GEMINI_API_KEY: ${{ secrets.CICD_GEMINI_API_KEY_OPEN_RUNTIME }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          dart run runtime_ci_tooling:manage_cicd explore \
+            --prev-tag "${{ needs.determine-version.outputs.prev_tag }}" \
+            --version "${{ needs.determine-version.outputs.new_version }}"
+
+      - name: Create fallback stage1 artifacts if missing
+        run: |
+          [ -f /tmp/commit_analysis.json ] || echo '{"commits":[],"note":"Gemini unavailable - no analysis generated"}' > /tmp/commit_analysis.json
+          [ -f /tmp/pr_data.json ] || echo '{"pull_requests":[],"note":"Gemini unavailable"}' > /tmp/pr_data.json
+          [ -f /tmp/breaking_changes.json ] || echo '{"breaking_changes":[],"note":"Gemini unavailable"}' > /tmp/breaking_changes.json
+
+      - uses: actions/upload-artifact@v6.0.0
+        with:
+          name: stage1-artifacts
+          path: |
+            /tmp/commit_analysis.json
+            /tmp/pr_data.json
+            /tmp/breaking_changes.json
+          if-no-files-found: warn
+          retention-days: 1
+
+      - name: Upload CI/CD audit trail
+        uses: actions/upload-artifact@v6.0.0
+        with:
+          name: cicd-audit-explore
+          path: .cicd_runs/
+          if-no-files-found: ignore
+          retention-days: 1
+
+  # ============================================================================
+  # Job 4: Stage 2 -- Composer Agent + Documentation
+  # ============================================================================
+  compose-artifacts:
+    needs: [determine-version, explore-changes]
+    if: needs.determine-version.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Configure Git for HTTPS with Token
+        shell: bash
+        run: |
+          TOKEN="${{ secrets.TSAVO_AT_PIECES_PERSONAL_ACCESS_TOKEN || secrets.GITHUB_TOKEN }}"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "git@github.com:"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "ssh://git@github.com/"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/open-runtime/".insteadOf "git@github.com:open-runtime/"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/pieces-app/".insteadOf "git@github.com:pieces-app/"
+
+      - name: Skip LFS for dependency clones
+        run: git lfs install --skip-smudge
+
+      - uses: dart-lang/setup-dart@v1.7.1
+        with:
+          sdk: "3.9.2"
+
+      - name: Cache Dart pub dependencies
+        uses: actions/cache@v5.0.3
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-dart-pub-${{ hashFiles('**/pubspec.yaml') }}
+          restore-keys: ${{ runner.os }}-dart-pub-
+
+      - run: dart pub get
+
+      - uses: actions/setup-node@v6.2.0
+        with:
+          node-version: "22"
+
+      - run: npm install -g @google/gemini-cli@latest
+
+      - name: Cache Go modules (GitHub MCP server)
+        uses: actions/cache@v5.0.3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-mcp-v1
+          restore-keys: ${{ runner.os }}-go-mcp-
+
+      - uses: actions/download-artifact@v7.0.0
+        continue-on-error: true
+        with:
+          name: stage1-artifacts
+          path: /tmp/
+
+      - uses: actions/download-artifact@v7.0.0
+        continue-on-error: true
+        with:
+          name: issue-manifest
+          path: /tmp/
+
+      - name: Stage 2 Composer
+        env:
+          GEMINI_API_KEY: ${{ secrets.CICD_GEMINI_API_KEY_OPEN_RUNTIME }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          dart run runtime_ci_tooling:manage_cicd compose \
+            --prev-tag "${{ needs.determine-version.outputs.prev_tag }}" \
+            --version "${{ needs.determine-version.outputs.new_version }}"
+
+      - name: Documentation update
+        env:
+          GEMINI_API_KEY: ${{ secrets.CICD_GEMINI_API_KEY_OPEN_RUNTIME }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          dart run runtime_ci_tooling:manage_cicd documentation \
+            --prev-tag "${{ needs.determine-version.outputs.prev_tag }}" \
+            --version "${{ needs.determine-version.outputs.new_version }}"
+
+      - name: Autodoc (module documentation)
+        env:
+          GEMINI_API_KEY: ${{ secrets.CICD_GEMINI_API_KEY_OPEN_RUNTIME }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: dart run runtime_ci_tooling:manage_cicd autodoc
+
+      - uses: actions/upload-artifact@v6.0.0
+        with:
+          name: composed-artifacts
+          path: |
+            CHANGELOG.md
+            README.md
+            docs/
+            .runtime_ci/autodoc.json
+          if-no-files-found: warn
+          retention-days: 1
+
+      - name: Upload CI/CD audit trail
+        uses: actions/upload-artifact@v6.0.0
+        with:
+          name: cicd-audit-compose
+          path: .cicd_runs/
+          if-no-files-found: ignore
+          retention-days: 1
+
+  # ============================================================================
+  # Job 5: Stage 3 -- Release Notes Author
+  # ============================================================================
+  release-notes:
+    needs: [determine-version, explore-changes, pre-release-triage, compose-artifacts]
+    if: needs.determine-version.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Configure Git for HTTPS with Token
+        shell: bash
+        run: |
+          TOKEN="${{ secrets.TSAVO_AT_PIECES_PERSONAL_ACCESS_TOKEN || secrets.GITHUB_TOKEN }}"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "git@github.com:"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "ssh://git@github.com/"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/open-runtime/".insteadOf "git@github.com:open-runtime/"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/pieces-app/".insteadOf "git@github.com:pieces-app/"
+
+      - name: Skip LFS for dependency clones
+        run: git lfs install --skip-smudge
+
+      - uses: dart-lang/setup-dart@v1.7.1
+        with:
+          sdk: "3.9.2"
+
+      - name: Cache Dart pub dependencies
+        uses: actions/cache@v5.0.3
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-dart-pub-${{ hashFiles('**/pubspec.yaml') }}
+          restore-keys: ${{ runner.os }}-dart-pub-
+
+      - run: dart pub get
+
+      - uses: actions/setup-node@v6.2.0
+        with:
+          node-version: "22"
+
+      - run: npm install -g @google/gemini-cli@latest
+
+      - name: Cache Go modules (GitHub MCP server)
+        uses: actions/cache@v5.0.3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-mcp-v1
+          restore-keys: ${{ runner.os }}-go-mcp-
+
+      # Download ALL previous stage artifacts for context
+      - uses: actions/download-artifact@v7.0.0
+        continue-on-error: true
+        with:
+          name: stage1-artifacts
+          path: /tmp/
+
+      - uses: actions/download-artifact@v7.0.0
+        continue-on-error: true
+        with:
+          name: issue-manifest
+          path: /tmp/
+
+      - uses: actions/download-artifact@v7.0.0
+        continue-on-error: true
+        with:
+          name: composed-artifacts
+          path: ./artifacts/
+
+      - uses: actions/download-artifact@v7.0.0
+        continue-on-error: true
+        with:
+          name: version-bump-rationale
+          path: ./version_bumps/
+
+      # Copy CHANGELOG from compose stage so release notes can reference it
+      - name: Apply compose artifacts
+        run: |
+          if [ -f ./artifacts/CHANGELOG.md ]; then
+            cp ./artifacts/CHANGELOG.md ./CHANGELOG.md
+          fi
+          if [ -f ./artifacts/README.md ]; then
+            cp ./artifacts/README.md ./README.md
+          fi
+
+      - name: Stage 3 Release Notes Author
+        env:
+          GEMINI_API_KEY: ${{ secrets.CICD_GEMINI_API_KEY_OPEN_RUNTIME }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          dart run runtime_ci_tooling:manage_cicd release-notes \
+            --prev-tag "${{ needs.determine-version.outputs.prev_tag }}" \
+            --version "${{ needs.determine-version.outputs.new_version }}"
+
+      - name: Consolidate release notes
+        run: |
+          VERSION="${{ needs.determine-version.outputs.new_version }}"
+          mkdir -p "release_notes/v${VERSION}"
+          cp /tmp/release_notes_body.md "release_notes/v${VERSION}/" 2>/dev/null || true
+          cp /tmp/migration_guide.md "release_notes/v${VERSION}/" 2>/dev/null || true
+          echo "Contents of release_notes/v${VERSION}/:"
+          ls -la "release_notes/v${VERSION}/" 2>/dev/null || echo "(empty)"
+
+      - uses: actions/upload-artifact@v6.0.0
+        with:
+          name: release-notes-artifacts
+          path: release_notes/
+          if-no-files-found: warn
+          retention-days: 1
+
+      - name: Upload CI/CD audit trail
+        uses: actions/upload-artifact@v6.0.0
+        with:
+          name: cicd-audit-release-notes
+          path: .cicd_runs/
+          if-no-files-found: ignore
+          retention-days: 1
+
+  # ============================================================================
+  # Job 6: Create Release
+  # ============================================================================
+  create-release:
+    needs: [determine-version, compose-artifacts, release-notes]
+    if: needs.determine-version.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.TSAVO_AT_PIECES_PERSONAL_ACCESS_TOKEN }}
+          persist-credentials: true
+
+      - name: Configure Git for HTTPS with Token
+        shell: bash
+        run: |
+          TOKEN="${{ secrets.TSAVO_AT_PIECES_PERSONAL_ACCESS_TOKEN }}"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "git@github.com:"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "ssh://git@github.com/"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/open-runtime/".insteadOf "git@github.com:open-runtime/"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/pieces-app/".insteadOf "git@github.com:pieces-app/"
+
+      - name: Skip LFS for dependency clones
+        run: git lfs install --skip-smudge
+
+      - uses: dart-lang/setup-dart@v1.7.1
+        with:
+          sdk: "3.9.2"
+
+      - name: Cache Dart pub dependencies
+        uses: actions/cache@v5.0.3
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-dart-pub-${{ hashFiles('**/pubspec.yaml') }}
+          restore-keys: ${{ runner.os }}-dart-pub-
+
+      - run: dart pub get
+
+      - uses: actions/download-artifact@v7.0.0
+        continue-on-error: true
+        with:
+          name: composed-artifacts
+          path: ./artifacts/
+
+      - uses: actions/download-artifact@v7.0.0
+        continue-on-error: true
+        with:
+          name: release-notes-artifacts
+          path: ./release-notes-artifacts/
+
+      - uses: actions/download-artifact@v7.0.0
+        continue-on-error: true
+        with:
+          name: version-bump-rationale
+          path: ./version_bumps/
+
+      - name: Download CI/CD audit trails
+        continue-on-error: true
+        uses: actions/download-artifact@v7.0.0
+        with:
+          pattern: cicd-audit-*
+          path: .cicd_runs_incoming/
+          merge-multiple: false
+
+      - name: Prepare artifacts
+        run: |
+          VERSION="${{ needs.determine-version.outputs.new_version }}"
+          mkdir -p ./artifacts ./version_bumps "./release_notes/v${VERSION}"
+
+          if [ -d "./release-notes-artifacts/v${VERSION}" ]; then
+            cp -r "./release-notes-artifacts/v${VERSION}/"* "./release_notes/v${VERSION}/" 2>/dev/null || true
+          elif [ -d "./release-notes-artifacts" ]; then
+            FOUND=$(find ./release-notes-artifacts -name "release_notes.md" -type f 2>/dev/null | head -1)
+            if [ -n "$FOUND" ]; then
+              cp "$(dirname "$FOUND")"/* "./release_notes/v${VERSION}/" 2>/dev/null || true
+            fi
+          fi
+
+          if [ -f "./release_notes/v${VERSION}/release_notes_body.md" ]; then
+            cp "./release_notes/v${VERSION}/release_notes_body.md" /tmp/release_notes_body.md
+          elif [ -f "./release_notes/v${VERSION}/release_notes.md" ]; then
+            cp "./release_notes/v${VERSION}/release_notes.md" /tmp/release_notes_body.md
+          fi
+
+          echo "Release notes contents:"
+          ls -la "./release_notes/v${VERSION}/" 2>/dev/null || echo "(empty)"
+
+      - name: Merge CI/CD audit trails
+        continue-on-error: true
+        run: |
+          dart run runtime_ci_tooling:manage_cicd merge-audit-trails \
+            --incoming-dir .cicd_runs_incoming \
+            --output-dir .cicd_runs
+
+      - name: Archive audit trail
+        run: |
+          dart run runtime_ci_tooling:manage_cicd archive-run \
+            --version "${{ needs.determine-version.outputs.new_version }}"
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ secrets.TSAVO_AT_PIECES_PERSONAL_ACCESS_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.TSAVO_AT_PIECES_PERSONAL_ACCESS_TOKEN }}
+        run: |
+          dart run runtime_ci_tooling:manage_cicd create-release \
+            --version "${{ needs.determine-version.outputs.new_version }}" \
+            --prev-tag "${{ needs.determine-version.outputs.prev_tag }}" \
+            --artifacts-dir ./artifacts \
+            --repo "${{ github.repository }}"
+
+  # ============================================================================
+  # Job 7: Post-Release Triage
+  # ============================================================================
+  post-release-triage:
+    needs: [determine-version, create-release]
+    if: needs.determine-version.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Configure Git for HTTPS with Token
+        shell: bash
+        run: |
+          TOKEN="${{ secrets.TSAVO_AT_PIECES_PERSONAL_ACCESS_TOKEN || secrets.GITHUB_TOKEN }}"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "git@github.com:"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "ssh://git@github.com/"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/open-runtime/".insteadOf "git@github.com:open-runtime/"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/pieces-app/".insteadOf "git@github.com:pieces-app/"
+
+      - name: Skip LFS for dependency clones
+        run: git lfs install --skip-smudge
+
+      - uses: dart-lang/setup-dart@v1.7.1
+        with:
+          sdk: "3.9.2"
+
+      - name: Cache Dart pub dependencies
+        uses: actions/cache@v5.0.3
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-dart-pub-${{ hashFiles('**/pubspec.yaml') }}
+          restore-keys: ${{ runner.os }}-dart-pub-
+
+      - run: dart pub get
+
+      - uses: actions/setup-node@v6.2.0
+        with:
+          node-version: "22"
+
+      - run: npm install -g @google/gemini-cli@latest
+
+      - name: Cache Go modules (GitHub MCP server)
+        uses: actions/cache@v5.0.3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-mcp-v1
+          restore-keys: ${{ runner.os }}-go-mcp-
+
+      - uses: actions/download-artifact@v7.0.0
+        continue-on-error: true
+        with:
+          name: issue-manifest
+          path: /tmp/
+
+      - name: Post-release triage
+        env:
+          GEMINI_API_KEY: ${{ secrets.CICD_GEMINI_API_KEY_OPEN_RUNTIME }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          dart run runtime_ci_tooling:manage_cicd post-release-triage \
+            --version "${{ needs.determine-version.outputs.new_version }}" \
+            --release-tag "v${{ needs.determine-version.outputs.new_version }}" \
+            --release-url "https://github.com/${{ github.repository }}/releases/tag/v${{ needs.determine-version.outputs.new_version }}" \
+            --manifest /tmp/issue_manifest.json

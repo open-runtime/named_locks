@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pre-check:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.bot_check.outputs.should_run }}
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Check for release bot commit
+        id: bot_check
+        run: |
+          AUTHOR=$(git log -1 --format='%an')
+          MSG=$(git log -1 --format='%s')
+          echo "Commit author: $AUTHOR"
+          echo "Commit subject: $MSG"
+          if [[ "$AUTHOR" == "github-actions[bot]" ]] || [[ "$MSG" == *"[skip ci]"* ]]; then
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Release bot commit detected — skipping CI."
+          else
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  analyze-and-test:
+    needs: pre-check
+    if: needs.pre-check.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Configure Git for HTTPS with Token
+        shell: bash
+        run: |
+          TOKEN="${{ secrets.TSAVO_AT_PIECES_PERSONAL_ACCESS_TOKEN || secrets.GITHUB_TOKEN }}"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "git@github.com:"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "ssh://git@github.com/"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/open-runtime/".insteadOf "git@github.com:open-runtime/"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/pieces-app/".insteadOf "git@github.com:pieces-app/"
+
+      - name: Skip LFS for dependency clones
+        run: git lfs install --skip-smudge
+
+      - uses: dart-lang/setup-dart@v1.7.1
+        with:
+          sdk: "3.9.2"
+
+      - name: Cache Dart pub dependencies
+        uses: actions/cache@v5.0.3
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-dart-pub-${{ hashFiles('**/pubspec.yaml') }}
+          restore-keys: ${{ runner.os }}-dart-pub-
+
+      - run: dart pub get
+
+      - name: Cache Dart analysis
+        uses: actions/cache@v5.0.3
+        with:
+          path: ~/.dartServer
+          key: ${{ runner.os }}-dart-analysis-${{ hashFiles('**/*.dart', '**/pubspec.yaml') }}
+          restore-keys: ${{ runner.os }}-dart-analysis-
+
+      - name: Analyze
+        run: dart run runtime_ci_tooling:manage_cicd analyze
+
+      - name: Test
+        run: dart run runtime_ci_tooling:manage_cicd test
