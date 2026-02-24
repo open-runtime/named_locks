@@ -1,3 +1,6 @@
 
 *.lock
 /.dart_tool
+
+# Claude AI session data
+.claude/
