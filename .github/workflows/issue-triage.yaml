@@ -15,6 +15,7 @@ permissions:
   contents: read
 
 env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   GEMINI_API_KEY: ${{ secrets.CICD_GEMINI_API_KEY_OPEN_RUNTIME }}
   OPENAI_API_KEY: ${{ secrets.OPEN_AI_API_KEY_GLOBAL_CLOUD_RUNTIME }}
   ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY_GLOBAL_CLOUD_RUNTIME }}
@@ -41,7 +42,7 @@ jobs:
             echo "run=true" >> $GITHUB_OUTPUT
           fi
 
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
         if: steps.trigger.outputs.run == 'true'
         with:
           fetch-depth: 1
@@ -50,12 +51,14 @@ jobs:
       - name: Configure Git for HTTPS with Token
         if: steps.trigger.outputs.run == 'true'
         shell: bash
+        env:
+          GH_PAT: ${{ secrets.TSAVO_AT_PIECES_PERSONAL_ACCESS_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
-          TOKEN="${{ secrets.TSAVO_AT_PIECES_PERSONAL_ACCESS_TOKEN || secrets.GITHUB_TOKEN }}"
-          git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "git@github.com:"
-          git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "ssh://git@github.com/"
-          git config --global url."https://x-access-token:${TOKEN}@github.com/open-runtime/".insteadOf "git@github.com:open-runtime/"
-          git config --global url."https://x-access-token:${TOKEN}@github.com/pieces-app/".insteadOf "git@github.com:pieces-app/"
+          git config --global url."https://x-access-token:${GH_PAT}@github.com/".insteadOf "git@github.com:"
+          git config --global url."https://x-access-token:${GH_PAT}@github.com/".insteadOf "ssh://git@github.com/"
+          git config --global url."https://x-access-token:${GH_PAT}@github.com/".insteadOf "https://github.com/"
+          git config --global url."https://x-access-token:${GH_PAT}@github.com/open-runtime/".insteadOf "git@github.com:open-runtime/"
+          git config --global url."https://x-access-token:${GH_PAT}@github.com/pieces-app/".insteadOf "git@github.com:pieces-app/"
 
       - uses: dart-lang/setup-dart@v1.7.1
         if: steps.trigger.outputs.run == 'true'
@@ -64,25 +67,26 @@ jobs:
 
       - name: Cache Dart pub dependencies
         if: steps.trigger.outputs.run == 'true'
-        uses: actions/cache@v5.0.3
+        uses: actions/cache@v5
         with:
-          path: ~/.pub-cache
+          path: ${{ runner.os == 'Windows' && format('{0}\\Pub\\Cache', env.LOCALAPPDATA) || '~/.pub-cache' }}
           key: ${{ runner.os }}-dart-pub-${{ hashFiles('**/pubspec.yaml') }}
           restore-keys: ${{ runner.os }}-dart-pub-
 
       - run: dart pub get
         if: steps.trigger.outputs.run == 'true'
 
-      - uses: actions/setup-node@v6.2.0
+      - uses: actions/setup-node@v6
         if: steps.trigger.outputs.run == 'true'
         with:
           node-version: "22"
 
       - run: npm install -g @google/gemini-cli@latest
+        if: steps.trigger.outputs.run == 'true'
 
       - name: Cache Go modules (GitHub MCP server)
         if: steps.trigger.outputs.run == 'true'
-        uses: actions/cache@v5.0.3
+        uses: actions/cache@v5
         with:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-mcp-v1
@@ -93,4 +97,5 @@ jobs:
         env:
           GEMINI_API_KEY: ${{ secrets.CICD_GEMINI_API_KEY_OPEN_RUNTIME }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: dart run runtime_ci_tooling:triage_cli ${{ github.event.issue.number }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: dart run runtime_ci_tooling:triage_cli "$ISSUE_NUMBER"

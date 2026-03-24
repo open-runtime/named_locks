@@ -1,0 +1,37 @@
+# Autodoc Safety Policy — Restricts docs-only runs to markdown outputs.
+#
+# When Gemini runs during `manage_cicd autodoc` or `manage_cicd documentation`,
+# it must only write `.md` files and must never create helper scripts or other
+# non-Markdown artifacts. This template may be copied into consumer workspaces
+# and may also be applied directly from the installed `runtime_ci_tooling`
+# package at invocation time.
+
+# Allow docs-only file edits for .md files only
+# (Gemini CLI 0.34+: file edits use `write_file` / `replace`; `edit_file` is not a registered tool.)
+[[rule]]
+toolName = ["write_file", "replace"]
+decision = "allow"
+priority = 100
+argsPattern = '"(file_path|path)"\s*:\s*"[^"]*\.md"'
+
+# Deny docs-only file edits for all non-.md files
+[[rule]]
+toolName = ["write_file", "replace"]
+decision = "deny"
+priority = 90
+deny_message = "Autodoc safety: only .md files may be edited. Source code and config files are read-only."
+
+# Allow all read operations unconditionally
+[[rule]]
+toolName = ["read_file", "read_many_files", "glob", "grep_search", "list_directory"]
+decision = "allow"
+priority = 100
+
+# Deny shell access entirely for docs-only Gemini runs. The tooling already
+# provides the required prompt and file context, so shell access is unnecessary
+# and can be abused to create helper scripts or other non-Markdown files.
+[[rule]]
+toolName = ["run_shell_command"]
+decision = "deny"
+priority = 100
+deny_message = "Autodoc safety: shell access is disabled during docs-only Gemini runs."

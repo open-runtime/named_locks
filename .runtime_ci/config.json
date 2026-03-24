@@ -116,9 +116,12 @@
       "managed_analyze": false,
       "managed_test": false,
       "build_runner": false,
-      "autodoc": true
+      "autodoc": true,
+      "web_test": false
     },
-    "secrets": {},
+    "secrets": {
+      "env_file": false
+    },
     "sub_packages": [],
     "platforms": [
       "ubuntu-x64",
@@ -131,6 +134,28 @@
     "runner_overrides": {
       "ubuntu-arm64": "runtime-ubuntu-24.04-arm64-208gb-64core",
       "windows-arm64": "runtime-windows-11-arm64-208gb-64core"
-    }
-  }
+    },
+    "language": "dart",
+    "test_exclude_tags": "gcp,integration",
+    "dart": {
+      "sdk": "3.9.2",
+      "line_length": 120
+    },
+    "flutter": {
+      "channel": "stable"
+    },
+    "typescript": {
+      "node_version": "24",
+      "package_manager": "pnpm"
+    },
+    "rust": {
+      "toolchain": "stable"
+    },
+    "artifact_retention_days": 7,
+    "git_orgs": [
+      "open-runtime",
+      "pieces-app"
+    ]
+  },
+  "packages": []
 }
