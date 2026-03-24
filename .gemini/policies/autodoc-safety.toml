@@ -1,10 +1,13 @@
 # Autodoc Safety Policy — Restricts docs-only runs to markdown outputs.
 #
+# Canonical copy: edit this file under runtime_ci_tooling `templates/gemini/policies/`.
+# `manage_cicd init` and `manage_cicd update --templates` sync it to
+# `.gemini/policies/autodoc-safety.toml` in each repo (see templates/manifest.json).
+#
 # When Gemini runs during `manage_cicd autodoc` or `manage_cicd documentation`,
 # it must only write `.md` files and must never create helper scripts or other
-# non-Markdown artifacts. This template may be copied into consumer workspaces
-# and may also be applied directly from the installed `runtime_ci_tooling`
-# package at invocation time.
+# non-Markdown artifacts. The installed `runtime_ci_tooling` package may also
+# apply this policy from its template tree at invocation time.
 
 # Allow docs-only file edits for .md files only
 # (Gemini CLI 0.34+: file edits use `write_file` / `replace`; `edit_file` is not a registered tool.)
