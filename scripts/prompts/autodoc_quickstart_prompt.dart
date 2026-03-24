@@ -9,9 +9,7 @@ import 'dart:io';
 
 void main(List<String> args) {
   if (args.length < 2) {
-    stderr.writeln(
-      'Usage: autodoc_quickstart_prompt.dart <module_name> <source_dir> [lib_dir]',
-    );
+    stderr.writeln('Usage: autodoc_quickstart_prompt.dart <module_name> <source_dir> [lib_dir]');
     exit(1);
   }
 
@@ -28,22 +26,16 @@ void main(List<String> args) {
   final firstDart = _runSync(
     'find $sourceDir -name "*.dart" -not -name "*.g.dart" -not -name "*.pb.dart" -not -name "*.pbenum.dart" -not -name "*.pbjson.dart" -not -name "*.pbgrpc.dart" -type f 2>/dev/null | head -1',
   );
-  final dartPreview = firstDart.isNotEmpty
-      ? _truncate(_runSync('cat "$firstDart"'), 15000)
-      : '(no Dart files)';
+  final dartPreview = firstDart.isNotEmpty ? _truncate(_runSync('cat "$firstDart"'), 15000) : '(no Dart files)';
 
   final classes = _runSync(
     'grep -rn "^class\\|^abstract class\\|^mixin\\|^extension" $sourceDir 2>/dev/null | head -30',
   );
-  final exports = _runSync(
-    'grep -rn "^export" $sourceDir 2>/dev/null | head -20',
-  );
+  final exports = _runSync('grep -rn "^export" $sourceDir 2>/dev/null | head -20');
 
   String libTree = '(same as source)';
   if (libDir.isNotEmpty && libDir != sourceDir && Directory(libDir).existsSync()) {
-    libTree = _runSync(
-      'tree $libDir -L 2 --dirsfirst -I "*.g.dart" 2>/dev/null || echo "(no tree)"',
-    );
+    libTree = _runSync('tree $libDir -L 2 --dirsfirst -I "*.g.dart" 2>/dev/null || echo "(no tree)"');
   }
 
   print('''
@@ -120,11 +112,7 @@ Generate the complete QUICKSTART.md content.
 
 String _runSync(String command) {
   try {
-    final result = Process.runSync(
-      'sh',
-      ['-c', command],
-      workingDirectory: Directory.current.path,
-    );
+    final result = Process.runSync('sh', ['-c', command], workingDirectory: Directory.current.path);
     if (result.exitCode == 0) return (result.stdout as String).trim();
     return '(command failed)';
   } catch (_) {

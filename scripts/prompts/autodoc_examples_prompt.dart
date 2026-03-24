@@ -9,9 +9,7 @@ import 'dart:io';
 
 void main(List<String> args) {
   if (args.length < 2) {
-    stderr.writeln(
-      'Usage: autodoc_examples_prompt.dart <module_name> <source_dir> [lib_dir]',
-    );
+    stderr.writeln('Usage: autodoc_examples_prompt.dart <module_name> <source_dir> [lib_dir]');
     exit(1);
   }
 
@@ -19,30 +17,19 @@ void main(List<String> args) {
   final sourceDir = args[1];
   final libDir = args.length > 2 ? args[2] : '';
 
-  final classes = _runSync(
-    'grep -rn "^class\\|^abstract class\\|^mixin" $sourceDir 2>/dev/null | head -30',
-  );
+  final classes = _runSync('grep -rn "^class\\|^abstract class\\|^mixin" $sourceDir 2>/dev/null | head -30');
   final methods = _runSync(
     'grep -rn "Future<\\|Stream<\\|void " $sourceDir 2>/dev/null | grep -v "^\\/\\/" | head -30',
   );
-  final enums = _runSync(
-    'grep -rn "^enum" $sourceDir 2>/dev/null',
-  );
+  final enums = _runSync('grep -rn "^enum" $sourceDir 2>/dev/null');
 
   String testContent = '(no tests found)';
   final testDir = libDir.isNotEmpty ? libDir.replaceFirst('lib/', 'test/') : '';
   if (testDir.isNotEmpty && Directory(testDir).existsSync()) {
-    testContent = _truncate(
-      _runSync(
-        'find $testDir -name "*_test.dart" -exec head -50 {} \\; 2>/dev/null',
-      ),
-      10000,
-    );
+    testContent = _truncate(_runSync('find $testDir -name "*_test.dart" -exec head -50 {} \\; 2>/dev/null'), 10000);
   }
 
-  final commands = _runSync(
-    'grep -rn "extends Command" $sourceDir 2>/dev/null | head -20',
-  );
+  final commands = _runSync('grep -rn "extends Command" $sourceDir 2>/dev/null | head -20');
 
   print('''
 You are writing practical code examples for the **$moduleName** module.
@@ -100,11 +87,7 @@ Generate the complete EXAMPLES.md content.
 
 String _runSync(String command) {
   try {
-    final result = Process.runSync(
-      'sh',
-      ['-c', command],
-      workingDirectory: Directory.current.path,
-    );
+    final result = Process.runSync('sh', ['-c', command], workingDirectory: Directory.current.path);
     if (result.exitCode == 0) return (result.stdout as String).trim();
     return '';
   } catch (_) {

@@ -1,16 +1,13 @@
 import 'dart:io' show sleep;
 import 'dart:isolate' show Isolate, ReceivePort, SendPort;
 import 'dart:math' show Random;
-import 'package:runtime_named_locks/runtime_named_locks.dart'
-    show ExecutionCall, NamedLock;
+import 'package:runtime_named_locks/runtime_named_locks.dart' show ExecutionCall, NamedLock;
 import 'package:safe_int_id/safe_int_id.dart' show safeIntId;
 import 'package:test/test.dart' show equals, expect, group, isA, test, throwsA;
 
 class IntentionalTestException implements Exception {
   final String message;
-  IntentionalTestException({
-    this.message = 'Intentional test exception message.',
-  });
+  IntentionalTestException({this.message = 'Intentional test exception message.'});
   @override
   String toString() => message;
 }
@@ -20,22 +17,14 @@ void main() {
     test('Unsafe exception catch', () {
       final name = '${safeIntId.getId()}_named_lock';
 
-      final execution = ExecutionCall<void, IntentionalTestException>(
-        callable: () => throw IntentionalTestException(),
-      );
+      final execution = ExecutionCall<void, IntentionalTestException>(callable: () => throw IntentionalTestException());
 
       expect(
-        () => NamedLock.guard<void, IntentionalTestException>(
-          name: name,
-          execution: execution,
-        ),
+        () => NamedLock.guard<void, IntentionalTestException>(name: name, execution: execution),
         throwsA(isA<IntentionalTestException>()),
       );
 
-      expect(
-        execution.error.get?.anticipated.get,
-        isA<IntentionalTestException>(),
-      );
+      expect(execution.error.get?.anticipated.get, isA<IntentionalTestException>());
       expect(execution.completer.isCompleted, true);
       expect(execution.successful.isSet, true);
       expect(execution.successful.get, false);
@@ -49,129 +38,110 @@ void main() {
         /* Setting safe to true here */ safe: true,
       );
 
-      final guarded = NamedLock.guard<void, Exception>(
-        name: name,
-        execution: execution,
-      );
+      final guarded = NamedLock.guard<void, Exception>(name: name, execution: execution);
 
       expect(guarded.completer.isCompleted, true);
       expect(guarded.successful.isSet, true);
       expect(guarded.successful.get, false);
-      expect(
-        guarded.error.get?.anticipated.get,
-        isA<IntentionalTestException>(),
-      );
+      expect(guarded.error.get?.anticipated.get, isA<IntentionalTestException>());
       expect(guarded.error.get?.unknown.get, equals(null));
       expect(guarded.error.get?.trace.get, isA<StackTrace>());
-      expect(
-        () => guarded.error.get?.rethrow_(),
-        throwsA(isA<IntentionalTestException>()),
-      );
+      expect(() => guarded.error.get?.rethrow_(), throwsA(isA<IntentionalTestException>()));
     });
   });
 
-  group(
-    'NativeLock calling [guard] from single and multiple isolates and measuring reentrant behavior.',
-    () {
-      test('Reentrant within a single isolate', () {
-        final name = '${safeIntId.getId()}_named_lock';
+  group('NativeLock calling [guard] from single and multiple isolates and measuring reentrant behavior.', () {
+    test('Reentrant within a single isolate', () {
+      final name = '${safeIntId.getId()}_named_lock';
 
-        int nested_calculation() {
-          final ExecutionCall<int, Exception> execution = NamedLock.guard(
-            name: name,
-            execution: ExecutionCall<int, Exception>(
-              callable: () {
-                sleep(Duration(milliseconds: Random().nextInt(5000)));
-                return 3 + 4;
-              },
-            ),
-          );
-
-          return execution.returned;
-        }
-
+      int nested_calculation() {
         final ExecutionCall<int, Exception> execution = NamedLock.guard(
           name: name,
           execution: ExecutionCall<int, Exception>(
             callable: () {
-              sleep(Duration(milliseconds: Random().nextInt(2000)));
-              return (nested_calculation() * 2) + 5;
+              sleep(Duration(milliseconds: Random().nextInt(5000)));
+              return 3 + 4;
             },
           ),
         );
 
-        expect(execution.returned, equals(19));
-      });
+        return execution.returned;
+      }
 
-      test('Reentrant Behavior Across Several Isolates', () async {
-        Future<int> spawn_isolate(String name, int id) async {
-          // The entry point for the isolate
-          void isolate_entrypoint(SendPort sender) {
-            final ExecutionCall<int, Exception>
-            returnable = NamedLock.guard<int, Exception>(
-              name: name,
-              execution: ExecutionCall<int, Exception>(
-                callable: () {
-                  print('Isolate $id is executing with a guard.');
-                  sleep(Duration(milliseconds: Random().nextInt(2000)));
+      final ExecutionCall<int, Exception> execution = NamedLock.guard(
+        name: name,
+        execution: ExecutionCall<int, Exception>(
+          callable: () {
+            sleep(Duration(milliseconds: Random().nextInt(2000)));
+            return (nested_calculation() * 2) + 5;
+          },
+        ),
+      );
 
-                  final ExecutionCall<int, Exception>
-                  call = (NamedLock.guard<int, Exception>(
-                    name: name,
-                    execution: ExecutionCall<int, Exception>(
-                      callable: () {
-                        print('Isolate $id with nested guard is executing.');
-                        sleep(Duration(milliseconds: Random().nextInt(2000)));
-                        return 2;
-                      },
-                    ),
-                  ));
+      expect(execution.returned, equals(19));
+    });
 
-                  return 2 * call.returned;
-                },
-              ),
-            );
+    test('Reentrant Behavior Across Several Isolates', () async {
+      Future<int> spawn_isolate(String name, int id) async {
+        // The entry point for the isolate
+        void isolate_entrypoint(SendPort sender) {
+          final ExecutionCall<int, Exception> returnable = NamedLock.guard<int, Exception>(
+            name: name,
+            execution: ExecutionCall<int, Exception>(
+              callable: () {
+                print('Isolate $id is executing with a guard.');
+                sleep(Duration(milliseconds: Random().nextInt(2000)));
 
-            sender.send(returnable.returned);
-          }
+                final ExecutionCall<int, Exception> call = (NamedLock.guard<int, Exception>(
+                  name: name,
+                  execution: ExecutionCall<int, Exception>(
+                    callable: () {
+                      print('Isolate $id with nested guard is executing.');
+                      sleep(Duration(milliseconds: Random().nextInt(2000)));
+                      return 2;
+                    },
+                  ),
+                ));
 
-          // Create a receive port to get messages from the isolate
-          final receiver = ReceivePort();
+                return 2 * call.returned;
+              },
+            ),
+          );
 
-          // Spawn the isolate
-          await Isolate.spawn(isolate_entrypoint, receiver.sendPort);
-
-          // Wait for the isolate to send its message.
-          final result = await receiver.first;
-          return result as int;
+          sender.send(returnable.returned);
         }
 
-        final name = '${safeIntId.getId()}_named_sem';
+        // Create a receive port to get messages from the isolate
+        final receiver = ReceivePort();
 
-        final ExecutionCall<Future<int>, Exception> execution = NamedLock.guard(
-          name: name,
-          execution: ExecutionCall<Future<int>, Exception>(
-            callable: () async {
-              sleep(Duration(milliseconds: Random().nextInt(2000)));
-              final result_one = spawn_isolate(name, 1);
-              final result_two = spawn_isolate(name, 2);
-              final result_three = spawn_isolate(name, 3);
-              final result_four = spawn_isolate(name, 4);
-              final outcomes = await Future.wait([
-                result_one,
-                result_two,
-                result_three,
-                result_four,
-              ]);
-              print('Outcomes: $outcomes');
-              return outcomes.reduce((a, b) => a + b);
-            },
-          ),
-        );
+        // Spawn the isolate
+        await Isolate.spawn(isolate_entrypoint, receiver.sendPort);
 
-        final returned = await execution.returned;
-        expect(returned, equals(16));
-      });
-    },
-  );
+        // Wait for the isolate to send its message.
+        final result = await receiver.first;
+        return result as int;
+      }
+
+      final name = '${safeIntId.getId()}_named_sem';
+
+      final ExecutionCall<Future<int>, Exception> execution = NamedLock.guard(
+        name: name,
+        execution: ExecutionCall<Future<int>, Exception>(
+          callable: () async {
+            sleep(Duration(milliseconds: Random().nextInt(2000)));
+            final result_one = spawn_isolate(name, 1);
+            final result_two = spawn_isolate(name, 2);
+            final result_three = spawn_isolate(name, 3);
+            final result_four = spawn_isolate(name, 4);
+            final outcomes = await Future.wait([result_one, result_two, result_three, result_four]);
+            print('Outcomes: $outcomes');
+            return outcomes.reduce((a, b) => a + b);
+          },
+        ),
+      );
+
+      final returned = await execution.returned;
+      expect(returned, equals(16));
+    });
+  });
 }
