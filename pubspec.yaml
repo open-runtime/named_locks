@@ -26,6 +26,6 @@ dev_dependencies:
     git:
       url: git@github.com:open-runtime/runtime_ci_tooling.git
       tag_pattern: v{{version}}
-    version: ^0.14.1
+    version: ^0.23.0
   test: ^1.25.5
   safe_int_id: ^1.1.1
