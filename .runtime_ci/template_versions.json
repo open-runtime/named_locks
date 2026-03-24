@@ -1,6 +1,6 @@
 {
   "tooling_version": "0.23.10",
-  "updated_at": "2026-03-24T19:59:32.362603Z",
+  "updated_at": "2026-03-24T22:49:11.983033Z",
   "templates": {
     "gemini_settings": {
       "hash": "d5782f9214896de2f5a78909aaf44e7cbf6f37cc2aa362350da6fc55a2b5ab23",
@@ -28,19 +28,19 @@
       "updated_at": "2026-03-24T19:59:32.331198Z"
     },
     "workflow_ci": {
-      "hash": "222208451e81c6c73813101cbc66363e43f26eec3e5322b20344a2af5271081c",
-      "consumer_hash": "cecb431523292293e0eb5150efbd1c23ed504b4c1365431f066d7e006c018b15",
-      "updated_at": "2026-03-24T19:59:32.354007Z"
+      "hash": "29b43769752e972ed025d9798b123d83b3a837e727191da14239cf25874b3142",
+      "consumer_hash": "e0f344b4dc2e9eb5c520dd8ec17c7899d36ab61d2340bd3688402fc510b25588",
+      "updated_at": "2026-03-24T22:49:11.975452Z"
     },
     "workflow_release": {
-      "hash": "fda1bbe365d8d3940dfd8cc494a798050156aa1bfc39b051baf6a6a9e12ef2e3",
-      "consumer_hash": "0716417d72eb2d3f1ecd4c65361b79999b004185521c35efecad0eac0b7a359b",
-      "updated_at": "2026-03-24T19:59:32.360835Z"
+      "hash": "1db5f9b29a62129a6a20aef016ec5e448dfda896a83916d3394c6bf1ea941041",
+      "consumer_hash": "872e63916321140e7bc5eeed67e3b3374f65e7532c5e1f49e735c0f7f1bd1146",
+      "updated_at": "2026-03-24T22:49:11.981868Z"
     },
     "workflow_issue_triage": {
-      "hash": "17b442e09c5d8cdb0c0c67dfb20f42efe5e01787700bb581e6cf752f866a280a",
-      "consumer_hash": "12e0a5bc0a5970eb1dd005fb091754520b9b14ea5e7e9760932971a1f3dc3561",
-      "updated_at": "2026-03-24T19:59:32.362610Z"
+      "hash": "5467a30f81d0fe49afb2dcf302890f483b26259dad73d5662083fa171984e122",
+      "consumer_hash": "671917b1ec031ca9dc53e9807b1f8c55536e1d9198714292e9e1d26267d2dc74",
+      "updated_at": "2026-03-24T22:49:11.983040Z"
     },
     "gemini_policy_autodoc_safety": {
       "hash": "c28d04292ade13c13c16ceb5d2eff708c712cfffb6e568c7ecfb9f49628b9620",
