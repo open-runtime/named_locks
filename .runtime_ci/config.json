@@ -114,9 +114,22 @@
       "format_check": true,
       "analysis_cache": false,
       "managed_analyze": false,
-      "managed_test": false
+      "managed_test": false,
+      "build_runner": false
     },
     "secrets": {},
-    "sub_packages": []
+    "sub_packages": [],
+    "platforms": [
+      "ubuntu-x64",
+      "ubuntu-arm64",
+      "macos-arm64",
+      "macos-x64",
+      "windows-x64",
+      "windows-arm64"
+    ],
+    "runner_overrides": {
+      "ubuntu-arm64": "runtime-ubuntu-24.04-arm64-208gb-64core",
+      "windows-arm64": "runtime-windows-11-arm64-208gb-64core"
+    }
   }
 }
