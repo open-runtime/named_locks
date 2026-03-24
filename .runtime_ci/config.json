@@ -155,7 +155,8 @@
     "git_orgs": [
       "open-runtime",
       "pieces-app"
-    ]
+    ],
+    "activate_runtime_ci_tooling_from_path": false
   },
   "packages": []
 }

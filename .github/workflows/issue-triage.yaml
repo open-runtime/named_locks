@@ -60,7 +60,7 @@ jobs:
           git config --global url."https://x-access-token:${GH_PAT}@github.com/open-runtime/".insteadOf "git@github.com:open-runtime/"
           git config --global url."https://x-access-token:${GH_PAT}@github.com/pieces-app/".insteadOf "git@github.com:pieces-app/"
 
-      - uses: dart-lang/setup-dart@v1.7.1
+      - uses: dart-lang/setup-dart@v1.7.2
         if: steps.trigger.outputs.run == 'true'
         with:
           sdk: "3.9.2"

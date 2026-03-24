@@ -1,6 +1,6 @@
 {
   "tooling_version": "0.23.10",
-  "updated_at": "2026-03-24T18:40:15.026545Z",
+  "updated_at": "2026-03-24T19:59:32.362603Z",
   "templates": {
     "gemini_settings": {
       "hash": "d5782f9214896de2f5a78909aaf44e7cbf6f37cc2aa362350da6fc55a2b5ab23",
@@ -23,24 +23,24 @@
       "updated_at": "2026-02-24T00:59:56.971421Z"
     },
     "config_json": {
-      "hash": "a2ac33a948981361c8538551135389990c051925f0f7e192b7b8e95a52ea6f0a",
-      "consumer_hash": "ebf3ac08545505843349ae75ca0d3bf0232a682e93bda62ac9e5653d9bde82a6",
-      "updated_at": "2026-03-24T15:19:58.911458Z"
+      "hash": "60638ae58c57b0bf5f686b0569873ce1470f5f1fb19dcb7fbd3d0e4de4ec88c0",
+      "consumer_hash": "c248be3683bbbfd862b8f33eda69be9c7366796bffab86e211bf645c5217ffd5",
+      "updated_at": "2026-03-24T19:59:32.331198Z"
     },
     "workflow_ci": {
-      "hash": "d00326c808042d770df2ca58744c86482e5ec983241df1099a41fa36946e61f7",
-      "consumer_hash": "adee3d33770f9fa34493474bde8c7c1a9204e68404c0b373394f2d43e797ac19",
-      "updated_at": "2026-03-24T18:40:15.017482Z"
+      "hash": "222208451e81c6c73813101cbc66363e43f26eec3e5322b20344a2af5271081c",
+      "consumer_hash": "cecb431523292293e0eb5150efbd1c23ed504b4c1365431f066d7e006c018b15",
+      "updated_at": "2026-03-24T19:59:32.354007Z"
     },
     "workflow_release": {
-      "hash": "7d773915fbb40a1fdbb49722f31bbfa190b789c86ab3d15e6899fdc67063918b",
-      "consumer_hash": "369f0a2598c4c2835bb1f06b11ca7b1e1fb3af49880bd0e99341a2b42e2188d4",
-      "updated_at": "2026-03-24T18:40:15.024540Z"
+      "hash": "fda1bbe365d8d3940dfd8cc494a798050156aa1bfc39b051baf6a6a9e12ef2e3",
+      "consumer_hash": "0716417d72eb2d3f1ecd4c65361b79999b004185521c35efecad0eac0b7a359b",
+      "updated_at": "2026-03-24T19:59:32.360835Z"
     },
     "workflow_issue_triage": {
-      "hash": "68de3061ba1ba900053275dd8cc2a3b9dee0fc7c36f5f75f0f3a2dcc5bb04efd",
-      "consumer_hash": "186a2c64824bef06829921640ab0b495144a5af1f86ddc0f0f9cd8500def0c07",
-      "updated_at": "2026-03-24T18:40:15.026198Z"
+      "hash": "17b442e09c5d8cdb0c0c67dfb20f42efe5e01787700bb581e6cf752f866a280a",
+      "consumer_hash": "12e0a5bc0a5970eb1dd005fb091754520b9b14ea5e7e9760932971a1f3dc3561",
+      "updated_at": "2026-03-24T19:59:32.362610Z"
     },
     "gemini_policy_autodoc_safety": {
       "hash": "c28d04292ade13c13c16ceb5d2eff708c712cfffb6e568c7ecfb9f49628b9620",
