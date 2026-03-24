@@ -76,6 +76,10 @@ jobs:
       - run: dart pub get
         if: steps.trigger.outputs.run == 'true'
 
+      - name: Activate runtime_ci_tooling (pub global)
+        if: steps.trigger.outputs.run == 'true'
+        run: dart pub global activate --source git https://github.com/open-runtime/runtime_ci_tooling.git --git-ref v0.23.10
+
       - uses: actions/setup-node@v6
         if: steps.trigger.outputs.run == 'true'
         with:
@@ -98,4 +102,4 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.CICD_GEMINI_API_KEY_OPEN_RUNTIME }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
-        run: dart run runtime_ci_tooling:triage_cli "$ISSUE_NUMBER"
+        run: dart pub global run runtime_ci_tooling:triage_cli "$ISSUE_NUMBER"
