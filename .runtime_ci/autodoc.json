@@ -13,7 +13,7 @@
       "lib_paths": [
         "lib/src/"
       ],
-      "output_path": "docs/core/",
+      "output_path": "docs/core",
       "generate": [
         "quickstart",
         "api_reference",
@@ -31,7 +31,7 @@
       "lib_paths": [
         "lib/"
       ],
-      "output_path": "docs/",
+      "output_path": "docs",
       "generate": [
         "quickstart",
         "api_reference"
