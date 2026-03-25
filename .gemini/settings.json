@@ -5,6 +5,13 @@
   },
   "tools": {
     "core": [
+      "read_file",
+      "read_many_files",
+      "write_file",
+      "replace",
+      "glob",
+      "grep_search",
+      "list_directory",
       "run_shell_command(git)",
       "run_shell_command(gh)",
       "run_shell_command(tree)",
@@ -43,7 +50,10 @@
     },
     "sentry": {
       "command": "npx",
-      "args": ["-y", "@sentry/mcp-server@latest"],
+      "args": [
+        "-y",
+        "@sentry/mcp-server@latest"
+      ],
       "env": {
         "SENTRY_ACCESS_TOKEN": "$SENTRY_ACCESS_TOKEN"
       }
