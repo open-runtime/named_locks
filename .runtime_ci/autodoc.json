@@ -19,8 +19,8 @@
         "api_reference",
         "examples"
       ],
-      "hash": "",
-      "last_updated": null
+      "hash": "16de114ece3bc37dcb12ed70239997b74b44741d5cdc2af84b0ce6d34127b125",
+      "last_updated": "2026-03-25T02:06:24.673745Z"
     },
     {
       "id": "top_level",
@@ -36,8 +36,8 @@
         "quickstart",
         "api_reference"
       ],
-      "hash": "",
-      "last_updated": null
+      "hash": "ee58d879dfabd385fc16790af388b0c7f0e5f298743a6aa7e9e20dc0aaaa7961",
+      "last_updated": "2026-03-25T02:06:24.673979Z"
     }
   ],
   "templates": {
